@@ -43,9 +43,12 @@ async function handleThread(req, res, postId = null) {
             targetPost = foundPost;
         }
 
-        const imageUrl = targetPost.tim
+        const mediaUrl = targetPost.tim
             ? `https://i.4cdn.org/${board}/${targetPost.tim}${targetPost.ext}`
             : null;
+
+        // Check if the file is a video format
+        const isVideo = targetPost.ext && ['.webm', '.mp4', '.mov'].includes(targetPost.ext.toLowerCase());
 
         const title = postId
             ? `Post #${postId.startsWith('p') ? postId.slice(1) : postId} in /${board.toUpperCase()}/ Thread #${id}`
@@ -57,7 +60,32 @@ async function handleThread(req, res, postId = null) {
         const description = sanitizeHtml(commentWithLineBreaks, {
             allowedTags: [],
             allowedAttributes: {}
-        })
+        });
+
+        // Generate appropriate meta tags based on media type
+        let mediaTags = '';
+        if (mediaUrl) {
+            if (isVideo) {
+                // Video meta tags
+                mediaTags = `
+                <meta property="og:video" content="${mediaUrl}">
+                <meta property="og:video:type" content="video/${targetPost.ext.slice(1)}">
+                <meta property="og:video:width" content="${targetPost.w || 640}">
+                <meta property="og:video:height" content="${targetPost.h || 480}">
+                <meta name="twitter:card" content="player">
+                <meta name="twitter:player" content="${mediaUrl}">
+                <meta name="twitter:player:width" content="${targetPost.w || 640}">
+                <meta name="twitter:player:height" content="${targetPost.h || 480}">`;
+            } else {
+                // Image meta tags
+                mediaTags = `
+                <meta property="og:image" content="${mediaUrl}">
+                <meta property="og:image:width" content="${targetPost.w || ''}">
+                <meta property="og:image:height" content="${targetPost.h || ''}">
+                <meta name="twitter:card" content="summary_large_image">
+                <meta name="twitter:image" content="${mediaUrl}">`;
+            }
+        }
 
         res.send(`
             <!DOCTYPE html>
@@ -67,9 +95,8 @@ async function handleThread(req, res, postId = null) {
                 <title>${title}</title>
                 <meta property="og:title" content="${title}">
                 <meta property="og:description" content="${description}">
-                ${imageUrl ? `<meta property="og:image" content="${imageUrl}">` : ""}
-                <meta name="twitter:card" content="summary_large_image">
-                ${imageUrl ? `<meta name="twitter:image" content="${imageUrl}">` : ""}
+                <meta property="og:type" content="${isVideo ? 'video.other' : 'article'}">
+                ${mediaTags}
             </head>
             </html>
         `);
