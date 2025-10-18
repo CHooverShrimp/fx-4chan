@@ -1,6 +1,9 @@
 // utils/threadHandler.js
 // Shared logic between Express and Workers versions
 
+// Desuarchive boards
+const DESUARCHIVE_BOARDS = ['a', 'aco', 'an', 'c', 'cgl', 'co', 'd', 'fit', 'g', 'his', 'int', 'k', 'm', 'mlp', 'mu', 'q', 'qa', 'r9k', 'tg', 'trash', 'vr', 'wsg'];
+
 export async function handleThreadRequest(request, { board, threadId, postId = null })
 {
     const userAgent = request.headers.get?.('User-Agent') || request.get?.('User-Agent') || '';
@@ -21,22 +24,41 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
 
     try {
         const response = await fetch(apiUrl);
-        if (!response.ok) {
-            return { error: 'Thread not found', status: 404 };
-        }
+        let data;
+        let targetPost;
 
-        const data = await response.json();
-        let targetPost = data.posts[0]; // Default to OP
+        // If 4chan is kill, Desuarchive fallback
+        if (!response.ok && DESUARCHIVE_BOARDS.includes(board)) {
+            const lookupPostId = postId
+                ? (typeof postId === 'string' && postId.startsWith('p') ? postId.slice(1) : postId)
+                : threadId;
 
-        if (postId) {
-            // Remove 'p' prefix if it exists
-            const cleanPostId = typeof postId === 'string' && postId.startsWith('p') ? postId.slice(1) : postId;
-            const foundPost = data.posts.find(post => post.no === parseInt(cleanPostId));
-            if (!foundPost) {
-                return { error: 'Post not found', status: 404 };
+            const desuUrl = `https://desuarchive.org/_/api/chan/post?board=${board}&num=${lookupPostId}`;
+            const desuResponse = await fetch(desuUrl);
+
+            if (!desuResponse.ok) {
+                return { error: 'Thread not found', status: 404 };
             }
-            targetPost = foundPost;
+
+            const desuData = await desuResponse.json();
+            targetPost = desuData;
+        } else if (!response.ok) {
+            return { error: 'Thread not found', status: 404 };
+        } else {
+            data = await response.json();
+            targetPost = data.posts[0]; // Default to OP
+
+            if (postId) {
+                // Remove 'p' prefix if it exists
+                const cleanPostId = typeof postId === 'string' && postId.startsWith('p') ? postId.slice(1) : postId;
+                const foundPost = data.posts.find(post => post.no === parseInt(cleanPostId));
+                if (!foundPost) {
+                    return { error: 'Post not found', status: 404 };
+                }
+                targetPost = foundPost;
+            }
         }
+
 
         const mediaUrl = targetPost.tim
             ? `https://i.4cdn.org/${board}/${targetPost.tim}${targetPost.ext}`
