@@ -1,4 +1,5 @@
 # fx-4chan
+Try it: https://boards.fx4chan.org/g/thread/105076684
 
 Embed your favourite 4chan posts right onto dicksword or other media!
 
