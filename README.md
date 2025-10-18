@@ -4,6 +4,8 @@ Embed your favourite 4chan posts right onto >dicksword or other media!
 ## Try it
 https://boards.fx4chan.org/g/thread/105076684
 
+<img width="431" height="763" alt="image" src="https://github.com/user-attachments/assets/e04ce2d5-4e80-462e-a96f-0863fe0c0891" />
+
 The domain fx4chan.org is being maintained by a third party.
 
 ## why?
@@ -15,8 +17,6 @@ This is a lightweight and easy to understand solution. This solution truncates t
 
 ## why le no caching?
 You damn know why you should never cache images from 4chin lol
-
-<img width="431" height="763" alt="image" src="https://github.com/user-attachments/assets/e04ce2d5-4e80-462e-a96f-0863fe0c0891" />
 
 
 ## How 2 use
