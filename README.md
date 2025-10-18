@@ -28,6 +28,15 @@ i.e. `https://yourlink.org/s4s/thread/12470187/p12470355`
 
 Unfortunately without this eggstra step :DDDDDDDDDDD, I haven't figured out a way to properly passing it.
 
+### Archive integrations
+fx-4chan is currently supporting desuarchive.
+
+<img width="532" height="625" alt="image" src="https://github.com/user-attachments/assets/8409a7da-5a8c-4d72-bdeb-e9913468ee69" />
+
+There's one extra caveat, the desuarchive API works by looking up the post's ID. 
+
+Therefore, if you are embedding a comment, the thread ID doesn't have to be accurate. If you are posting the OP by itself, then the OP ID would have to be accurate
+
 ## How 2 host
 
 ### node.js and express
