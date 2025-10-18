@@ -48,4 +48,4 @@ There's already a wrangler.toml set up to correctly build the right cloudflare v
 
 \>import the git repo in WORKERS! NOT PAGES! 
 
-\>on ```Build command```, assign ```npm run build```
+\>on ```Build command```, assign ```npm install```
