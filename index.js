@@ -1,6 +1,6 @@
 // indexNormal.js - Express version
 import express from "express";
-import { handleThreadRequest } from "./utils/threadHandler.js";
+import { handleThreadRequest, DESUARCHIVE_BOARDS } from "./utils/threadHandler.js";
 
 const app = express();
 
