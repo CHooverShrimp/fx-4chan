@@ -14,6 +14,7 @@ The domain fx4chan.org is being maintained by a third party.
 That's correct, but vanilla embed sucks. It's too long and irrelevant, or plain missing features. They don't embed image of the post, putting the content of the post as the title, and worse of all, do not support embedding of comments in the thread.
 
 This is a lightweight and easy to understand solution. This solution truncates the name to make it more relevant (tldr lol), embed content and image from the OP as well as the comments in the OP.
+<img width="533" height="657" alt="image" src="https://github.com/user-attachments/assets/27d6a40a-5527-457a-bd73-36c64cb665c1" />
 
 ## why le no caching?
 You damn know why you should never cache images from 4chin lol
