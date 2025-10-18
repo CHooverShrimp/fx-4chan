@@ -2,7 +2,7 @@
 // Shared logic between Express and Workers versions
 
 // Desuarchive boards
-const DESUARCHIVE_BOARDS = ['a', 'aco', 'an', 'c', 'cgl', 'co', 'd', 'fit', 'g', 'his', 'int', 'k', 'm', 'mlp', 'mu', 'q', 'qa', 'r9k', 'tg', 'trash', 'vr', 'wsg'];
+export const DESUARCHIVE_BOARDS = ['a', 'aco', 'an', 'c', 'cgl', 'co', 'd', 'fit', 'g', 'his', 'int', 'k', 'm', 'mlp', 'mu', 'q', 'qa', 'r9k', 'tg', 'trash', 'vr', 'wsg'];
 
 export async function handleThreadRequest(request, { board, threadId, postId = null })
 {
