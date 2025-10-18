@@ -1,6 +1,11 @@
 # fx-4chan
 Try it: https://boards.fx4chan.org/g/thread/105076684
 
+The domain fx4chan.org is being maintained by a third party.
+
+![][icons]
+![License][licensebadge]][license]
+
 Embed your favourite 4chan posts right onto dicksword or other media!
 
 ## why?
