@@ -32,14 +32,14 @@ async function checkDesuarchive(board, threadId) {
   return null;
 }
 
-// Check if it's a bot/crawler
-const userAgent = req.get('User-Agent') || '';
-const isBotRequest = /bot|crawler|spider|facebook|twitter|discord|slack/i.test(userAgent);
-
 // Issue: can't pass hash fragment to the server. That means we can't pass #p12345678. replace # with /
 
 app.get("/:board/thread/:id", async (req, res) => {
   const { board, id } = req.params;
+
+  // Check if it's a bot/crawler
+  const userAgent = req.get('User-Agent') || '';
+  const isBotRequest = /bot|crawler|spider|facebook|twitter|discord|slack/i.test(userAgent);
 
   if (!isBotRequest) {
     // Check if thread exists on 4chan
@@ -80,7 +80,9 @@ app.get("/:board/thread/:id", async (req, res) => {
 app.get("/:board/thread/:id/p:postId", async (req, res) => {
   const { board, id, postId } = req.params;
 
-
+  // Check if it's a bot/crawler
+  const userAgent = req.get('User-Agent') || '';
+  const isBotRequest = /bot|crawler|spider|facebook|twitter|discord|slack/i.test(userAgent);
 
   if (!isBotRequest) {
     // Check if thread exists on 4chan
