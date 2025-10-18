@@ -9,7 +9,7 @@ https://boards.fx4chan.org/g/thread/105076684
 The domain fx4chan.org is being maintained by a third party.
 
 ## why?
-\>le why? isn't 4chan already having embed header?
+\>le why? doesn't 4chan already have embed header?
 
 That's correct, but vanilla embed sucks. It's too long and irrelevant, or plain missing features. They don't embed image of the post, putting the content of the post as the title, and worse of all, do not support embedding of comments in the thread.
 
