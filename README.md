@@ -41,5 +41,7 @@ Prerequisite: node.js
 
 ### Cloudflare
 There's already a wrangler.toml set up to correctly build the right cloudflare version
-
+\>go to ```Workers & Pages```
+\>create an application
+\>import the git repo in WORKERS! NOT PAGES! 
 \>on ```Build command```, assign ```npm run build```
