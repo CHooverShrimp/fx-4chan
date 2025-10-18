@@ -40,7 +40,9 @@ Prerequisite: node.js
 \>profit
 
 ### Cloudflare
-There's already a wrangler.toml set up to correctly build the right cloudflare version
+WARNING: Cloudflare worker is blocked by 4chan. All API calls are retuning error. You can use the cloudflare version as a redirect, but it's impossible to get an embed.
+
+There's already a wrangler.toml set up to correctly build the right cloudflare version.
 
 \>go to ```Workers & Pages```
 
