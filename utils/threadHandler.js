@@ -112,7 +112,6 @@ function sanitizeHtml(html) {
         .replace(/&quot;/g, '"')
         .replace(/&#039;/g, "'")
         .trim()
-        .slice(0, 200);
 }
 
 function escapeHtml(text) {
