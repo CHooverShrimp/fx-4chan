@@ -27,6 +27,8 @@ i.e. `https://yourlink.org/s4s/thread/12470187/p12470355`
 Unfortunately without this eggstra step :DDDDDDDDDDD, I haven't figured out a way to properly passing it.
 
 ## How 2 host
+
+### node.js and express
 Prerequisite: node.js
 
 \>run ```npm install``` to install dependencies
@@ -36,3 +38,8 @@ Prerequisite: node.js
 \>reverse proxy with nginx
 
 \>profit
+
+### Cloudflare
+There's already a wrangler.toml set up to correctly build the right cloudflare version
+
+\>on ```Build command```, assign ```npm run build```
