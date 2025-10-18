@@ -13,7 +13,8 @@ This is a lightweight and easy to understand solution. This solution truncates t
 ## why le no caching?
 You damn know why you should never cache images from 4chin lol
 
-<img width="408" height="370" alt="image" src="https://github.com/user-attachments/assets/2f22d3cc-1339-4212-b615-87f459f9e28f" />
+<img width="431" height="763" alt="image" src="https://github.com/user-attachments/assets/e04ce2d5-4e80-462e-a96f-0863fe0c0891" />
+
 
 ## How 2 use
 \>Have source link: `https://boards.4chan.org/s4s/thread/12470187`
