@@ -11,9 +11,34 @@ app.get("/", (req, res) => {
 // Issue: can't pass hash fragment to the server. That means we can't pass #p12345678. replace # with /
 
 app.get("/:board/thread/:id", async (req, res) => {
+  const { board, id } = req.params;
+
+  // Check if it's a bot/crawler
+  const userAgent = req.get('User-Agent') || '';
+  const isBotRequest = /bot|crawler|spider|facebook|twitter|discord|slack/i.test(userAgent);
+
+  if (!isBotRequest) {
+    // Check if thread exists on 4chan
+    const apiUrl = `https://a.4cdn.org/${board}/thread/${id}.json`;
+    try {
+      const checkResponse = await fetch(apiUrl);
+
+      if (!checkResponse.ok && DESUARCHIVE_BOARDS.includes(board)) {
+        // Thread archived, redirect to Desuarchive
+        return res.redirect(`https://desuarchive.org/${board}/thread/${id}/`);
+      }
+    } catch (err) {
+      console.error('Error checking thread:', err);
+    }
+
+    // Thread exists on 4chan or board not on Desuarchive
+    return res.redirect(`https://boards.4chan.org/${board}/thread/${id}`);
+  }
+
+  // Handle bot requests
   const result = await handleThreadRequest(req, {
-    board: req.params.board,
-    threadId: req.params.id,
+    board,
+    threadId: id,
   });
 
   if (result.redirect) {
@@ -26,10 +51,35 @@ app.get("/:board/thread/:id", async (req, res) => {
 });
 
 app.get("/:board/thread/:id/p:postId", async (req, res) => {
+  const { board, id, postId } = req.params;
+
+  // Check if it's a bot/crawler
+  const userAgent = req.get('User-Agent') || '';
+  const isBotRequest = /bot|crawler|spider|facebook|twitter|discord|slack/i.test(userAgent);
+
+  if (!isBotRequest) {
+    // Check if thread exists on 4chan
+    const apiUrl = `https://a.4cdn.org/${board}/thread/${id}.json`;
+    try {
+      const checkResponse = await fetch(apiUrl);
+
+      if (!checkResponse.ok && DESUARCHIVE_BOARDS.includes(board)) {
+        // Thread archived, redirect to Desuarchive with post anchor
+        return res.redirect(`https://desuarchive.org/${board}/thread/${id}/#${postId}`);
+      }
+    } catch (err) {
+      console.error('Error checking thread:', err);
+    }
+
+    // Thread exists on 4chan or board not on Desuarchive
+    return res.redirect(`https://boards.4chan.org/${board}/thread/${id}#p${postId}`);
+  }
+
+  // Handle bot requests
   const result = await handleThreadRequest(req, {
-    board: req.params.board,
-    threadId: req.params.id,
-    postId: req.params.postId,
+    board,
+    threadId: id,
+    postId,
   });
 
   if (result.redirect) {
