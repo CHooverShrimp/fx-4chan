@@ -69,7 +69,7 @@ export default {
                   }
                 } catch (err) {
                   // If fetch fails, try 4chan anyway
-                  window.location.href = chanUrl;
+                  //window.location.href = chanUrl;
                 }
               })();
             </script>
