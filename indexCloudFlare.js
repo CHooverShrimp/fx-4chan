@@ -69,7 +69,7 @@ export default {
                   }
                 } catch (err) {
                   // If fetch fails, go to 4chan anyway
-                  console.log(chanUrl);
+                  console.log(desuUrl);
                   //window.location.href = chanUrl;
                 }
               })();
