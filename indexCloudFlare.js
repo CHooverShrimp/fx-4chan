@@ -28,7 +28,7 @@ export default {
         // Pre-fetch desuarchive fallback URL
         let desuUrl = null;
         if (DESUARCHIVE_BOARDS.includes(board)) {
-          const desuThreadNum = await checkDesuarchive(board, (postID ? postID : threadId));
+          const desuThreadNum = await checkDesuarchive(board, (postId ? postId : threadId));
           if (desuThreadNum) {
             desuUrl = postId
               ? `https://desuarchive.org/${board}/thread/${desuThreadNum}/#${postId}`
