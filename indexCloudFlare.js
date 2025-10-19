@@ -54,19 +54,16 @@ export default {
                 const desuUrl = ${desuUrl ? `'${desuUrl}'` : 'null'};
 
                 try {
-                  const response = await fetch(apiUrl);
-                  if (response.ok) {
-                    // Thread exists on 4chan, redirect there
-                    window.location.href = chanUrl;
-                  }
+                  const response = await fetch(apiUrl, { mode: 'no-cors' });
+                  // If we get here without error, thread exists
+                  window.location.href = chanUrl;
                 } catch (err) {
-                  // If fetch fails, go to desu
+                  // Fetch failed = thread doesn't exist (404)
                   if (desuUrl) {
-                      //window.location.href = desuUrl;
-                    } else {
-                      // No desuarchive fallback available
-                      //window.location.href = chanUrl;
-                    }
+                    window.location.href = desuUrl;
+                  } else {
+                    window.location.href = chanUrl; // Shows 4chan's 404 interface because it doesn't exist
+                  }
                 }
               })();
             </script>
