@@ -68,7 +68,8 @@ export default {
                     }
                   }
                 } catch (err) {
-                  // If fetch fails, try 4chan anyway
+                  // If fetch fails, go to 4chan anyway
+                  console.log(chanUrl);
                   //window.location.href = chanUrl;
                 }
               })();
