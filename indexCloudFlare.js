@@ -56,7 +56,8 @@ export default {
                 try {
                   const response = await fetch(apiUrl, { mode: 'no-cors' });
                   // If we get here without error, thread exists
-                  window.location.href = chanUrl;
+                  // window.location.href = chanUrl;
+                  console.log(desuUrl + " PASSED");
                 } catch (err) {
                   // Fetch failed = thread doesn't exist (404)
                   console.log(desuUrl);
