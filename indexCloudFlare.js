@@ -20,21 +20,26 @@ export default {
       const isBotRequest = /bot|crawler|spider|facebook|twitter|discord|slack/i.test(userAgent);
 
       if (!isBotRequest) {
-        // For real users, return HTML that checks 4chan API client-side
-        const chanUrl = postId
-          ? `https://boards.4chan.org/${board}/thread/${threadId}#p${postId}`
-          : `https://boards.4chan.org/${board}/thread/${threadId}`;
-
         // Pre-fetch desuarchive fallback URL
         let desuUrl = null;
+        let trueThreadID = null;
+
         if (DESUARCHIVE_BOARDS.includes(board)) {
           const desuThreadNum = await checkDesuarchive(board, (postId ? postId : threadId));
           if (desuThreadNum) {
+            trueThreadID = desuThreadNum;
             desuUrl = postId
               ? `https://desuarchive.org/${board}/thread/${desuThreadNum}/#${postId}`
               : `https://desuarchive.org/${board}/thread/${desuThreadNum}/`;
           }
         }
+
+        // For real users, return HTML that checks 4chan API client-side
+        const chanUrl = postId
+          ? `https://boards.4chan.org/${board}/thread/${trueThreadID ? trueThreadID : threadId}#p${postId}`
+          : `https://boards.4chan.org/${board}/thread/${trueThreadID ? trueThreadID : threadId}`;
+
+
 
         const html = `
           <!DOCTYPE html>
@@ -59,7 +64,7 @@ export default {
                       window.location.href = desuUrl;
                     } else {
                       // No desuarchive fallback available
-                      window.location.href = chanUrl;
+                      // window.location.href = chanUrl;
                     }
                   }
                 } catch (err) {
