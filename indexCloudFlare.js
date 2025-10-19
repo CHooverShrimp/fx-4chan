@@ -54,17 +54,35 @@ export default {
                 const desuUrl = ${desuUrl ? `'${desuUrl}'` : 'null'};
 
                 try {
-                  const response = await fetch(apiUrl, { mode: 'no-cors' });
-                  // If we get here without error, thread exists
-                  // window.location.href = chanUrl;
-                  console.log(desuUrl + " PASSED");
-                } catch (err) {
-                  // Fetch failed = thread doesn't exist (404)
-                  console.log(desuUrl);
-                  if (desuUrl) {
-                    //window.location.href = desuUrl;
+                  const response = await fetch(apiUrl); // Regular CORS mode
+                  // This will throw a TypeError due to CORS if thread exists (200)
+                  // But won't throw if it's a 404 (no CORS headers sent on 404)
+                  console.log('Response received:', response.status, response.ok);
+                  if (response.ok) {
+                    console.log("Response OK")
+                    //window.location.href = chanUrl;
                   } else {
-                    //window.location.href = chanUrl; // Shows 4chan's 404 interface because it doesn't exist
+                    // Got a response but not ok (404)
+                    console.log("Response, not OK")
+                    if (desuUrl) {
+                      //window.location.href = desuUrl;
+                    } else {
+                      //window.location.href = chanUrl;
+                    }
+                  }
+                } catch (err) {
+                  // CORS error = thread exists but we can't read it
+                  console.log('Error type:', err.name, err.message);
+                  if (err.name === 'TypeError' && err.message.includes('Failed to fetch')) {
+                    // This is likely CORS blocking a 200 response
+                    //window.location.href = chanUrl;
+                  } else {
+                    // Other error
+                    if (desuUrl) {
+                      //window.location.href = desuUrl;
+                    } else {
+                      //window.location.href = chanUrl;
+                    }
                   }
                 }
               })();
