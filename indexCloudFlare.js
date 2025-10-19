@@ -62,10 +62,10 @@ export default {
                 } catch (err) {
                   // If fetch fails, go to desu
                   if (desuUrl) {
-                      window.location.href = desuUrl;
+                      //window.location.href = desuUrl;
                     } else {
                       // No desuarchive fallback available
-                      window.location.href = chanUrl;
+                      //window.location.href = chanUrl;
                     }
                 }
               })();
