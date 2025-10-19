@@ -1,4 +1,4 @@
-// Cloudflare Workers version - no Express needed
+// Cloudflare Workers version
 import { handleThreadRequest, DESUARCHIVE_BOARDS } from "./utils/threadHandler.js";
 
 export default {
