@@ -59,10 +59,11 @@ export default {
                   window.location.href = chanUrl;
                 } catch (err) {
                   // Fetch failed = thread doesn't exist (404)
+                  console.log(desuUrl);
                   if (desuUrl) {
-                    window.location.href = desuUrl;
+                    //window.location.href = desuUrl;
                   } else {
-                    window.location.href = chanUrl; // Shows 4chan's 404 interface because it doesn't exist
+                    //window.location.href = chanUrl; // Shows 4chan's 404 interface because it doesn't exist
                   }
                 }
               })();
