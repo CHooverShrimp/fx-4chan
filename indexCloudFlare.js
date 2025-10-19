@@ -20,33 +20,66 @@ export default {
       const isBotRequest = /bot|crawler|spider|facebook|twitter|discord|slack/i.test(userAgent);
 
       if (!isBotRequest) {
-        // Check if thread exists on 4chan
-        const apiUrl = `https://a.4cdn.org/${board}/thread/${threadId}.json`;
-        try {
-          const checkResponse = await fetch(apiUrl);
-
-          if (!checkResponse.ok) {
-            // Thread archived, redirect to Desuarchive
-            const desuThreadNum = await checkDesuarchive(board, postId || threadId);
-            if (desuThreadNum) {
-              const desuUrl = postId
-                ? `https://desuarchive.org/${board}/thread/${desuThreadNum}/#${postId}`
-                : `https://desuarchive.org/${board}/thread/${desuThreadNum}/`;
-              return Response.redirect(desuUrl, 302);
-            }
-          }
-        } catch (err) {
-          console.error('Error checking thread:', err);
-        }
-
-        // Thread exists on 4chan or not found anywhere
-        const redirectUrl = postId
+        // For real users, return HTML that checks 4chan API client-side
+        const chanUrl = postId
           ? `https://boards.4chan.org/${board}/thread/${threadId}#p${postId}`
           : `https://boards.4chan.org/${board}/thread/${threadId}`;
-        return Response.redirect(redirectUrl, 302);
+
+        // Pre-fetch desuarchive fallback URL
+        let desuUrl = null;
+        if (DESUARCHIVE_BOARDS.includes(board)) {
+          const desuThreadNum = await checkDesuarchive(board, (postID ? postID : threadId));
+          if (desuThreadNum) {
+            desuUrl = postId
+              ? `https://desuarchive.org/${board}/thread/${desuThreadNum}/#${postId}`
+              : `https://desuarchive.org/${board}/thread/${desuThreadNum}/`;
+          }
+        }
+
+        const html = `
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="utf-8">
+            <title>Redirecting...</title>
+            <script>
+              (async function() {
+                const apiUrl = 'https://a.4cdn.org/${board}/thread/${threadId}.json';
+                const chanUrl = '${chanUrl}';
+                const desuUrl = ${desuUrl ? `'${desuUrl}'` : 'null'};
+
+                try {
+                  const response = await fetch(apiUrl);
+                  if (response.ok) {
+                    // Thread exists on 4chan, redirect there
+                    window.location.href = chanUrl;
+                  } else {
+                    // Thread doesn't exist, try desuarchive
+                    if (desuUrl) {
+                      window.location.href = desuUrl;
+                    } else {
+                      // No desuarchive fallback available
+                      window.location.href = chanUrl;
+                    }
+                  }
+                } catch (err) {
+                  // If fetch fails, try 4chan anyway
+                  window.location.href = chanUrl;
+                }
+              })();
+            </script>
+          </head>
+          <body>
+            <p>Redirecting...</p>
+          </body>
+          </html>`;
+
+        return new Response(html, {
+          headers: { 'Content-Type': 'text/html;charset=UTF-8' },
+        });
       }
 
-      // Handle bot requests
+      // Handle bot requests (for embeds)
       const result = await handleThreadRequest(request, { board, threadId, postId });
 
       if (result.redirect) {
@@ -66,7 +99,6 @@ export default {
 
 // Helper function to check Desuarchive using post API
 async function checkDesuarchive(board, threadId) {
-
   if (!DESUARCHIVE_BOARDS.includes(board)) {
     return null;
   }
