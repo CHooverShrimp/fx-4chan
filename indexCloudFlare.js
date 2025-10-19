@@ -58,19 +58,15 @@ export default {
                   if (response.ok) {
                     // Thread exists on 4chan, redirect there
                     window.location.href = chanUrl;
-                  } else {
-                    // Thread doesn't exist, try desuarchive
-                    if (desuUrl) {
+                  }
+                } catch (err) {
+                  // If fetch fails, go to desu
+                  if (desuUrl) {
                       window.location.href = desuUrl;
                     } else {
                       // No desuarchive fallback available
-                      // window.location.href = chanUrl;
+                      window.location.href = chanUrl;
                     }
-                  }
-                } catch (err) {
-                  // If fetch fails, go to 4chan anyway
-                  console.log(desuUrl);
-                  //window.location.href = chanUrl;
                 }
               })();
             </script>
