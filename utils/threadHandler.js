@@ -24,15 +24,38 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
 
     try {
         const response = await fetch(apiUrl);
+        let cleanPostId, foundPost;
+
         let data;
         let targetPost;
 
-        // If 4chan is kill, Desuarchive fallback
-        if (!response.ok && DESUARCHIVE_BOARDS.includes(board)) {
-            const lookupPostId = postId
-                ? (typeof postId === 'string' && postId.startsWith('p') ? postId.slice(1) : postId)
-                : threadId;
+        if (response.ok) {
+            data = await response.json();
+        }
 
+        // Check if comment is not deleted from 4chan
+        if (postId && response.ok) {
+            // Remove 'p' prefix if it exists
+            cleanPostId = typeof postId === 'string' && postId.startsWith('p') ? postId.slice(1) : postId;
+            foundPost = data.posts.find(post => post.no === parseInt(cleanPostId));
+        }
+
+        // If 4chan is kill, Desuarchive fallback
+        // or if 4chan alive, but comment dead
+        if ((!response.ok && DESUARCHIVE_BOARDS.includes(board)) || (response.ok && !foundPost && DESUARCHIVE_BOARDS.includes(board))) {
+            const lookupPostId = postId ? cleanPostId : threadId;
+
+            let shouldFetchDesu = true;
+
+            if (response.ok && (lookupPostId === threadId))
+            {
+                // In this case, the thread is alive, but comment cannot be found on both desu AND 4chan
+                targetPost = data.posts[0]; // Return OP from 4chan
+                shouldFetchDesu = false;
+            }
+
+            if (shouldFetchDesu)
+            {
             const desuUrl = `https://desuarchive.org/_/api/chan/post?board=${board}&num=${lookupPostId}`;
             const desuResponse = await fetch(desuUrl);
 
@@ -54,19 +77,17 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
                 // Store original media link as fallback
                 desuMediaLink: desuData.media?.media_link || null
             };
+
+            // Find the original thread ID
+            threadId = desuData.thread_num;
+        }
+
         } else if (!response.ok) {
             return { error: 'Thread not found', status: 404 };
         } else {
-            data = await response.json();
             targetPost = data.posts[0]; // Default to OP
 
-            if (postId) {
-                // Remove 'p' prefix if it exists
-                const cleanPostId = typeof postId === 'string' && postId.startsWith('p') ? postId.slice(1) : postId;
-                const foundPost = data.posts.find(post => post.no === parseInt(cleanPostId));
-                if (!foundPost) {
-                    return { error: 'Post not found', status: 404 };
-                }
+            if (foundPost) {
                 targetPost = foundPost;
             }
         }
@@ -125,6 +146,7 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
                         <meta property="og:title" content="${escapeHtml(title)}">
                         <meta property="og:description" content="${escapeHtml(description)}">
                         <meta property="og:type" content="${isVideo ? 'video.other' : 'article'}">
+                        <meta name="author" content="${escapeHtml(targetPost.name)}">
                         ${mediaTags}
                         <meta http-equiv="refresh" content="0;url=${redirectUrl}">
                 </head>
