@@ -35,10 +35,13 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
             data = await response.json();
         }
 
+        // Remove 'p' prefix if it exists
+        if (postId) {
+            cleanPostId = typeof postId === 'string' && postId.startsWith('p') ? postId.slice(1) : postId;
+        }
+
         // Check if comment is not deleted from 4chan
         if (postId && response.ok) {
-            // Remove 'p' prefix if it exists
-            cleanPostId = typeof postId === 'string' && postId.startsWith('p') ? postId.slice(1) : postId;
             foundPost = data.posts.find(post => post.no === parseInt(cleanPostId));
         }
 
