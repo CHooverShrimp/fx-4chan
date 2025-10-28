@@ -22,6 +22,8 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
 
     const apiUrl = `https://a.4cdn.org/${board}/thread/${threadId}.json`;
 
+    let source = "4chan";
+
     try {
         const response = await fetch(apiUrl);
         let cleanPostId, foundPost;
@@ -80,6 +82,7 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
 
                 // Find the original thread ID
                 threadId = desuData.thread_num;
+                source = "Desuarchive"
             }
 
         } else if (!response.ok) {
@@ -146,13 +149,10 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
                         <meta property="og:title" content="${title}">
                         <meta property="og:description" content="${description}">
                         <meta property="og:type" content="${isVideo ? 'video.other' : 'article'}">
-                        <meta property="og:site_name" content="${targetPost.name}">
+                        <meta property="og:site_name" content="${source}">
                         ${mediaTags}
                         <meta http-equiv="refresh" content="0;url=${redirectUrl}">
                 </head>
-                <body>
-                        <p>Redirecting to <a href="${redirectUrl}">4chan thread</a>...</p>
-                </body>
                 </html>`;
 
         return { html };
