@@ -146,7 +146,7 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
                         <meta property="og:title" content="${title}">
                         <meta property="og:description" content="${description}">
                         <meta property="og:type" content="${isVideo ? 'video.other' : 'article'}">
-                        <meta name="author" content="${targetPost.name}">
+                        <meta property="og:site_name" content="${targetPost.name}">
                         ${mediaTags}
                         <meta http-equiv="refresh" content="0;url=${redirectUrl}">
                 </head>
