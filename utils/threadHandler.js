@@ -56,31 +56,31 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
 
             if (shouldFetchDesu)
             {
-            const desuUrl = `https://desuarchive.org/_/api/chan/post?board=${board}&num=${lookupPostId}`;
-            const desuResponse = await fetch(desuUrl);
+                const desuUrl = `https://desuarchive.org/_/api/chan/post?board=${board}&num=${lookupPostId}`;
+                const desuResponse = await fetch(desuUrl);
 
-            if (!desuResponse.ok) {
-                return { error: 'Thread not found', status: 404 };
+                if (!desuResponse.ok) {
+                    return { error: 'Thread not found', status: 404 };
+                }
+
+                const desuData = await desuResponse.json();
+
+                // Convert Desuarchive API format to 4chan API format
+                targetPost = {
+                    no: parseInt(desuData.num),
+                    sub: desuData.title_processed || desuData.title,
+                    com: desuData.comment_processed || desuData.comment,
+                    tim: desuData.media?.media ? desuData.media.media.split('.')[0] : null,
+                    ext: desuData.media?.media ? '.' + desuData.media.media.split('.').pop() : null,
+                    w: desuData.media?.media_w ? parseInt(desuData.media.media_w) : null,
+                    h: desuData.media?.media_h ? parseInt(desuData.media.media_h) : null,
+                    // Store original media link as fallback
+                    desuMediaLink: desuData.media?.media_link || null
+                };
+
+                // Find the original thread ID
+                threadId = desuData.thread_num;
             }
-
-            const desuData = await desuResponse.json();
-
-            // Convert Desuarchive API format to 4chan API format
-            targetPost = {
-                no: parseInt(desuData.num),
-                sub: desuData.title_processed || desuData.title,
-                com: desuData.comment_processed || desuData.comment,
-                tim: desuData.media?.media ? desuData.media.media.split('.')[0] : null,
-                ext: desuData.media?.media ? '.' + desuData.media.media.split('.').pop() : null,
-                w: desuData.media?.media_w ? parseInt(desuData.media.media_w) : null,
-                h: desuData.media?.media_h ? parseInt(desuData.media.media_h) : null,
-                // Store original media link as fallback
-                desuMediaLink: desuData.media?.media_link || null
-            };
-
-            // Find the original thread ID
-            threadId = desuData.thread_num;
-        }
 
         } else if (!response.ok) {
             return { error: 'Thread not found', status: 404 };
