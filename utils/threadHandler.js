@@ -142,11 +142,11 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
                 <html lang="en">
                 <head>
                         <meta charset="utf-8">
-                        <title>${escapeHtml(title)}</title>
-                        <meta property="og:title" content="${escapeHtml(title)}">
-                        <meta property="og:description" content="${escapeHtml(description)}">
+                        <title>${title}</title>
+                        <meta property="og:title" content="${title}">
+                        <meta property="og:description" content="${description}">
                         <meta property="og:type" content="${isVideo ? 'video.other' : 'article'}">
-                        <meta name="author" content="${escapeHtml(targetPost.name)}">
+                        <meta name="author" content="${targetPost.name}">
                         ${mediaTags}
                         <meta http-equiv="refresh" content="0;url=${redirectUrl}">
                 </head>
