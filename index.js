@@ -2,6 +2,7 @@
 
 import express from "express";
 import { handleThreadRequest } from "./utils/threadHandler.js";
+import * as config from "./config.js";
 
 const app = express();
 
@@ -51,7 +52,7 @@ app.get("/:board/thread/:id/p:postId", async (req, res) => {
 });
 
 app.get('/proxy/image', async (req, res) => {
-    if (!allowsImageProxy)
+    if (!config.allowsImageProxy)
         return res.status(404).send('Image proxying is not enabled for the server');
 
     const imageUrl = req.query.url;
@@ -61,7 +62,7 @@ app.get('/proxy/image', async (req, res) => {
     }
 
     // Validate URL is from allowed domains
-    const isAllowed = imageProxySrc.some(domain => imageUrl.includes(domain));
+    const isAllowed = config.imageProxySrc.some(domain => imageUrl.includes(domain));
 
     if (!isAllowed) {
         return res.status(403).send('Domain not allowed for proxying');

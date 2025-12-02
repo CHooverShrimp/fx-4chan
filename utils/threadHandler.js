@@ -1,6 +1,6 @@
 // utils/threadHandler.js
 // Shared logic between Express and Workers versions
-import * as config from "./config.js";
+import * as config from "../config.js";
 
 //Foolfuuka - Asagi Fetcher framework
 export const ARCHIVES = [
@@ -14,11 +14,13 @@ export const ARCHIVES = [
         api: "arch.b4k.dev",
         board: ["v", "vg", "vm", "vmg", "vp", "vrpg", "vst"],
     },
+    /* // 4plebs has anti-scraping behavior.
     {
         archive: "4plebs",
         api: "archive.4plebs.org",
         board: ["adv", "f", "hr", "mlpol", "mo", "o", "pol", "s4s", "sp", "tg", "trv", "tv", "x"],
     },
+    */
     {
         archive: "warosu",
         api: "warosu.org",
@@ -35,20 +37,13 @@ export const NSFWBoards = ["aco", "b", "bant", "d", "e", "gif", "h", "hc", "hm",
 
 export async function handleThreadRequest(request, { board, threadId, postId = null, baseUrl})
 {
-
+    if (!config.allowNSFWBoards && NSFWBoards.includes(board) || config.blacklistedBoards.includes(board)){
+        return { error: 'This board is not supported', status: 403 };
+    }
     const userAgent = request.headers.get?.('User-Agent') || request.get?.('User-Agent') || '';
 
     // Check if it's a bot/crawler (for embeds)
     const isBotRequest = /bot|crawler|spider|facebook|twitter|discord|slack/i.test(userAgent);
-
-    const redirectUrl = postId
-        ? `https://boards.4chan.org/${board}/thread/${threadId}#p${postId}`
-        : `https://boards.4chan.org/${board}/thread/${threadId}`;
-
-    if (!isBotRequest) {
-        // Redirect real users to actual 4chan thread
-        return { redirect: redirectUrl };
-    }
 
     const apiUrl = `https://a.4cdn.org/${board}/thread/${threadId}.json`;
 
@@ -60,14 +55,16 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
 
         let data;
         let targetPost;
+        let redirectUrl;
 
         let archiveName, apiDomain;
 
+        // Checking 4chan API if it's still alive
         if (response.ok) {
             data = await response.json();
         }
 
-        // Remove 'p' prefix if it exists
+        // Remove 'p' prefix if it exists on the comment ID
         if (postId) {
             cleanPostId = typeof postId === 'string'
                 ? postId.replace(/^[pq]/, '')
@@ -77,6 +74,15 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
         // Check if comment is not deleted from 4chan
         if (postId && response.ok) {
             foundPost = data.posts.find(post => post.no === parseInt(cleanPostId));
+        }
+
+        // If thread is still alive, returns a redirect
+        if (!isBotRequest && response.ok) {
+            redirectUrl = foundPost
+                ? `https://boards.4chan.org/${board}/thread/${threadId}#p${cleanPostId}`
+                : `https://boards.4chan.org/${board}/thread/${threadId}`;
+            // Redirect real users to actual 4chan thread
+            return { redirect: redirectUrl };
         }
 
         // Checks if the board is foolfuuka compliant
@@ -98,6 +104,13 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
                 // In this case, the thread is alive, but comment cannot be found on both the archives AND 4chan
                 targetPost = data.posts[0]; // Return OP from 4chan
                 shouldFetchArchive = false;
+
+                // Passing redirect if a real user
+                if(!isBotRequest) {
+                    if (cleanPostId === threadId)
+                        return { redirect: `https://boards.4chan.org/${board}/thread/${threadId}` };
+                    return { redirect: `https://boards.4chan.org/${board}/thread/${threadId}/#${cleanPostId}` };
+                }
             }
 
             if (shouldFetchArchive)
@@ -107,6 +120,13 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
 
                 if (!apiResponse.ok) {
                     return { error: 'Thread not found', status: 404 };
+                }
+
+                // Passing redirect if a real user
+                if(!isBotRequest) {
+                    if (cleanPostId === threadId)
+                        return { redirect: `https://${apiDomain}/${board}/thread/${lookupPostId}/` };
+                    return { redirect: `https://${apiDomain}/${board}/thread/${lookupPostId}/#q${cleanPostId}` };
                 }
 
                 const apiData = await apiResponse.json();
