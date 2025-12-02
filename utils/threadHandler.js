@@ -177,8 +177,6 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
             }
         }
 
-        console.log(mediaTags);
-
         const html = `
                 <!DOCTYPE html>
                 <html lang="en">
