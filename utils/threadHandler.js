@@ -77,12 +77,13 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
         }
 
         // If thread is still alive, returns a redirect
-        if (!isBotRequest && response.ok) {
+        if (response.ok) {
             redirectUrl = foundPost
                 ? `https://boards.4chan.org/${board}/thread/${threadId}#p${cleanPostId}`
                 : `https://boards.4chan.org/${board}/thread/${threadId}`;
             // Redirect real users to actual 4chan thread
-            return { redirect: redirectUrl };
+            if (!isBotRequest)
+                return { redirect: redirectUrl };
         }
 
         // Checks if the board is foolfuuka compliant
@@ -105,11 +106,12 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
                 targetPost = data.posts[0]; // Return OP from 4chan
                 shouldFetchArchive = false;
 
+                // Passing only OP
+                redirectUrl = `https://boards.4chan.org/${board}/thread/${threadId}`
+
                 // Passing redirect if a real user
                 if(!isBotRequest) {
-                    if (cleanPostId === threadId)
-                        return { redirect: `https://boards.4chan.org/${board}/thread/${threadId}` };
-                    return { redirect: `https://boards.4chan.org/${board}/thread/${threadId}/#${cleanPostId}` };
+                    return { redirect: redirectUrl };
                 }
             }
 
@@ -122,11 +124,15 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
                     return { error: 'Thread not found', status: 404 };
                 }
 
+                redirectUrl = foundPost
+                    ? `https://${apiDomain}/${board}/thread/${lookupPostId}/#q${cleanPostId}`
+                    : `https://${apiDomain}/${board}/thread/${lookupPostId}`;
+
                 // Passing redirect if a real user
                 if(!isBotRequest) {
                     if (cleanPostId === threadId)
-                        return { redirect: `https://${apiDomain}/${board}/thread/${lookupPostId}/` };
-                    return { redirect: `https://${apiDomain}/${board}/thread/${lookupPostId}/#q${cleanPostId}` };
+                        return { redirect: redirectUrl };
+                    return { redirect: redirectUrl };
                 }
 
                 const apiData = await apiResponse.json();
