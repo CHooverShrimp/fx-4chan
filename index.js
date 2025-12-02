@@ -1,7 +1,7 @@
 // index.js - Express version
 
 import express from "express";
-import { handleThreadRequest, allowsImageProxy, imageProxySrc } from "./utils/threadHandler.js";
+import { handleThreadRequest } from "./utils/threadHandler.js";
 
 //////* CONFIGURATION *//////
 // PORT
