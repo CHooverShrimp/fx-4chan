@@ -3,18 +3,6 @@
 import express from "express";
 import { handleThreadRequest } from "./utils/threadHandler.js";
 
-//////* CONFIGURATION *//////
-// PORT
-const webPort = 3000;
-const isHTTPS = true;
-
-// Image Proxying - Some image sources are blocked by services such as Discord. We bypass this by proxying.
-const allowsImageProxy = true;
-const imageProxySrc = ["arch-img.b4k.dev"];
-const imageProxyAge = 86400;                     // Request the services to cache for n seconds (default 24 hrs)
-
-/////////////////////////////
-
 const app = express();
 
 app.get("/", (req, res) => {
@@ -30,9 +18,7 @@ app.get("/:board/thread/:id", async (req, res) => {
   const result = await handleThreadRequest(req, {
     board,
     threadId: id,
-    baseUrl: `${isHTTPS ? "https" : req.protocol}://${req.get('host')}`,
-    allowsImageProxy,
-    imageProxySrc,
+    baseUrl: `${config.isHTTPS ? "https" : req.protocol}://${req.get('host')}`,
   });
 
   if (result.redirect) {
@@ -52,9 +38,7 @@ app.get("/:board/thread/:id/p:postId", async (req, res) => {
     board,
     threadId: id,
     postId,
-    baseUrl: `${isHTTPS ? "https" : req.protocol}://${req.get('host')}`,
-    allowsImageProxy,
-    imageProxySrc,
+    baseUrl: `${config.isHTTPS ? "https" : req.protocol}://${req.get('host')}`,
   });
 
   if (result.redirect) {
@@ -95,7 +79,7 @@ app.get('/proxy/image', async (req, res) => {
 
         // Set appropriate headers
         res.setHeader('Content-Type', contentType);
-        res.setHeader('Cache-Control', `public, max-age=${imageProxyAge}`);
+        res.setHeader('Cache-Control', `public, max-age=${config.imageProxyAge}`);
 
         // Stream the image
         const buffer = await response.arrayBuffer();
@@ -107,4 +91,4 @@ app.get('/proxy/image', async (req, res) => {
     }
 });
 
-app.listen(webPort, () => console.log(`Server running on port ${webPort}`));
+app.listen(config.webPort, () => console.log(`Server running on port ${config.webPort}`));

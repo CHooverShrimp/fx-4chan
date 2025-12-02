@@ -1,21 +1,39 @@
 // utils/threadHandler.js
 // Shared logic between Express and Workers versions
+import * as config from "./config.js";
 
 //Foolfuuka - Asagi Fetcher framework
 export const ARCHIVES = [
     {
         archive: "Desuarchive",
         api: "desuarchive.org",
-        board: ['a', 'aco', 'an', 'c', 'cgl', 'co', 'd', 'fit', 'g', 'his', 'int', 'k', 'm', 'mlp', 'mu', 'q', 'qa', 'r9k', 'tg', 'trash', 'vr', 'wsg'],
+        board: ["a", "aco", "an", "c", "cgl", "co", "d", "fit", "g", "his", "int", "k", "m", "mlp", "mu", "q", "qa", "r9k", "tg", "trash", "vr", "wsg"],
     },
     {
         archive: "b4k",
         api: "arch.b4k.dev",
-        board: ['v','vg','vm','vmg','vp','vrpg','vst'],
+        board: ["v", "vg", "vm", "vmg", "vp", "vrpg", "vst"],
+    },
+    {
+        archive: "4plebs",
+        api: "archive.4plebs.org",
+        board: ["adv", "f", "hr", "mlpol", "mo", "o", "pol", "s4s", "sp", "tg", "trv", "tv", "x"],
+    },
+    {
+        archive: "warosu",
+        api: "warosu.org",
+        board: ["3", "biz", "ck", "diy", "fa", "ic", "jp", "lit", "sci", "vr", "vt"],
+    },
+    {
+        archive: "Archived.Moe",
+        api: "archived.moe",
+        board: ["b", "bant", "cm", "gif", "h", "hc", "hm", "i", "m", "n", "news", "out", "p", "po", "pw", "qa", "qst", "r", "r9k", "s", "soc", "t", "tg", "toy", "u", "vip", "w", "wg", "wsg", "wsr", "xs", "y"],
     },
 ]
 
-export async function handleThreadRequest(request, { board, threadId, postId = null, baseUrl, allowsImageProxy, imageProxySrc})
+export const NSFWBoards = ["aco", "b", "bant", "d", "e", "gif", "h", "hc", "hm", "hr", "pol", "r", "r9k", "s", "s4s", "soc", "t", "u", "y"]
+
+export async function handleThreadRequest(request, { board, threadId, postId = null, baseUrl})
 {
 
     const userAgent = request.headers.get?.('User-Agent') || request.get?.('User-Agent') || '';
@@ -129,8 +147,8 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
             mediaUrl = targetPost.apiMediaLink;
 
             // If it's from b4k archive, proxy it through our server
-            if(allowsImageProxy) {
-                const needsProxy = imageProxySrc.some(domain => mediaUrl.includes(domain));
+            if(config.allowsImageProxy) {
+                const needsProxy = config.imageProxySrc.some(domain => mediaUrl.includes(domain));
                 if (needsProxy) {
                     mediaUrl = `${baseUrl}/proxy/image?url=${encodeURIComponent(mediaUrl)}`;
                 }
