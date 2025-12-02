@@ -3,7 +3,7 @@
 export const webPort = 3000;
 export const isHTTPS = true;
 
-// General Configuraiton
+// General Configuration
 export const allowNSFWBoards = true;
 export const blacklistedBoards = []; // If you don't want to proxy a board
 
