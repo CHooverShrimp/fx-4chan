@@ -15,8 +15,9 @@ export const ARCHIVES = [
     },
 ]
 
-export async function handleThreadRequest(request, { board, threadId, postId = null })
+export async function handleThreadRequest(request, { board, threadId, postId = null, baseUrl, allowsImageProxy, imageProxySrc})
 {
+
     const userAgent = request.headers.get?.('User-Agent') || request.get?.('User-Agent') || '';
 
     // Check if it's a bot/crawler (for embeds)
@@ -120,10 +121,21 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
             }
         }
 
+
+
         // Handle media URL - use archive link if available, otherwise construct 4chan URL
         let mediaUrl = null;
         if (targetPost.apiMediaLink) {
             mediaUrl = targetPost.apiMediaLink;
+
+            // If it's from b4k archive, proxy it through our server
+            if(allowsImageProxy) {
+                const needsProxy = imageProxySrc.some(domain => mediaUrl.includes(domain));
+                if (needsProxy) {
+                    mediaUrl = `${baseUrl}/proxy/image?url=${encodeURIComponent(mediaUrl)}`;
+                }
+            }
+
         } else if (targetPost.tim && targetPost.ext) {
             mediaUrl = `https://i.4cdn.org/${board}/${targetPost.tim}${targetPost.ext}`;
         }
@@ -164,6 +176,8 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
                         <meta name="twitter:image" content="${mediaUrl}">`;
             }
         }
+
+        console.log(mediaTags);
 
         const html = `
                 <!DOCTYPE html>
