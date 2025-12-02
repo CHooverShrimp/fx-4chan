@@ -1,8 +1,19 @@
 // utils/threadHandler.js
 // Shared logic between Express and Workers versions
 
-// Desuarchive boards
-export const DESUARCHIVE_BOARDS = ['a', 'aco', 'an', 'c', 'cgl', 'co', 'd', 'fit', 'g', 'his', 'int', 'k', 'm', 'mlp', 'mu', 'q', 'qa', 'r9k', 'tg', 'trash', 'vr', 'wsg'];
+//Foolfuuka - Asagi Fetcher framework
+export const ARCHIVES = [
+    {
+        archive: "Desuarchive",
+        api: "desuarchive.org",
+        board: ['a', 'aco', 'an', 'c', 'cgl', 'co', 'd', 'fit', 'g', 'his', 'int', 'k', 'm', 'mlp', 'mu', 'q', 'qa', 'r9k', 'tg', 'trash', 'vr', 'wsg'],
+    },
+    {
+        archive: "b4k",
+        api: "arch.b4k.dev",
+        board: ['v','vg','vm','vmg','vp','vrpg','vst'],
+    },
+]
 
 export async function handleThreadRequest(request, { board, threadId, postId = null })
 {
@@ -31,13 +42,17 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
         let data;
         let targetPost;
 
+        let archiveName, apiDomain;
+
         if (response.ok) {
             data = await response.json();
         }
 
         // Remove 'p' prefix if it exists
         if (postId) {
-            cleanPostId = typeof postId === 'string' && postId.startsWith('p') ? postId.slice(1) : postId;
+            cleanPostId = typeof postId === 'string'
+                ? postId.replace(/^[pq]/, '')
+                : postId;
         }
 
         // Check if comment is not deleted from 4chan
@@ -45,47 +60,54 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
             foundPost = data.posts.find(post => post.no === parseInt(cleanPostId));
         }
 
-        // If 4chan is kill, Desuarchive fallback
+        // Checks if the board is foolfuuka compliant
+        const matchedArchive = ARCHIVES.find(archive => archive.board.includes(board));
+        if (matchedArchive) {
+            archiveName = matchedArchive.archive;
+            apiDomain = matchedArchive.api;
+        }
+
+        // If 4chan is kill, foolfuuka fallback
         // or if 4chan alive, but comment dead
-        if ((!response.ok && DESUARCHIVE_BOARDS.includes(board)) || (response.ok && !foundPost && DESUARCHIVE_BOARDS.includes(board))) {
+        if ((!response.ok && matchedArchive) || (response.ok && !foundPost && matchedArchive)) {
             const lookupPostId = postId ? cleanPostId : threadId;
 
-            let shouldFetchDesu = true;
+            let shouldFetchArchive = true;
 
             if (response.ok && (lookupPostId === threadId))
             {
-                // In this case, the thread is alive, but comment cannot be found on both desu AND 4chan
+                // In this case, the thread is alive, but comment cannot be found on both the archives AND 4chan
                 targetPost = data.posts[0]; // Return OP from 4chan
-                shouldFetchDesu = false;
+                shouldFetchArchive = false;
             }
 
-            if (shouldFetchDesu)
+            if (shouldFetchArchive)
             {
-                const desuUrl = `https://desuarchive.org/_/api/chan/post?board=${board}&num=${lookupPostId}`;
-                const desuResponse = await fetch(desuUrl);
+                const apiURL = `https://${apiDomain}/_/api/chan/post?board=${board}&num=${lookupPostId}`;
+                const apiResponse = await fetch(apiURL);
 
-                if (!desuResponse.ok) {
+                if (!apiResponse.ok) {
                     return { error: 'Thread not found', status: 404 };
                 }
 
-                const desuData = await desuResponse.json();
+                const apiData = await apiResponse.json();
 
-                // Convert Desuarchive API format to 4chan API format
+                // Convert Foolfuuka API format to 4chan API format
                 targetPost = {
-                    no: parseInt(desuData.num),
-                    sub: desuData.title_processed || desuData.title,
-                    com: desuData.comment_processed || desuData.comment,
-                    tim: desuData.media?.media ? desuData.media.media.split('.')[0] : null,
-                    ext: desuData.media?.media ? '.' + desuData.media.media.split('.').pop() : null,
-                    w: desuData.media?.media_w ? parseInt(desuData.media.media_w) : null,
-                    h: desuData.media?.media_h ? parseInt(desuData.media.media_h) : null,
+                    no: parseInt(apiData.num),
+                    sub: apiData.title_processed || apiData.title,
+                    com: apiData.comment_processed || apiData.comment,
+                    tim: apiData.media?.media ? apiData.media.media.split('.')[0] : null,
+                    ext: apiData.media?.media ? '.' + apiData.media.media.split('.').pop() : null,
+                    w: apiData.media?.media_w ? parseInt(apiData.media.media_w) : null,
+                    h: apiData.media?.media_h ? parseInt(apiData.media.media_h) : null,
                     // Store original media link as fallback
-                    desuMediaLink: desuData.media?.media_link || null
+                    apiMediaLink: apiData.media?.media_link || null
                 };
 
                 // Find the original thread ID
-                threadId = desuData.thread_num;
-                source = "Desuarchive"
+                threadId = apiData.thread_num;
+                source = archiveName;
             }
 
         } else if (!response.ok) {
@@ -98,10 +120,10 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
             }
         }
 
-        // Handle media URL - use Desuarchive link if available, otherwise construct 4chan URL
+        // Handle media URL - use archive link if available, otherwise construct 4chan URL
         let mediaUrl = null;
-        if (targetPost.desuMediaLink) {
-            mediaUrl = targetPost.desuMediaLink;
+        if (targetPost.apiMediaLink) {
+            mediaUrl = targetPost.apiMediaLink;
         } else if (targetPost.tim && targetPost.ext) {
             mediaUrl = `https://i.4cdn.org/${board}/${targetPost.tim}${targetPost.ext}`;
         }
