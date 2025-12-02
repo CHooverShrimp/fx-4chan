@@ -6,11 +6,12 @@ import { handleThreadRequest } from "./utils/threadHandler.js";
 //////* CONFIGURATION *//////
 // PORT
 const webPort = 3000;
+const isHTTPS = true;
 
 // Image Proxying - Some image sources are blocked by services such as Discord. We bypass this by proxying.
-export const allowsImageProxy = true;
-export const imageProxySrc = ["arch-img.b4k.dev"];
-export const imageProxyAge = 86400;                     // Request the services to cache for n seconds (default 24 hrs)
+const allowsImageProxy = true;
+const imageProxySrc = ["arch-img.b4k.dev"];
+const imageProxyAge = 86400;                     // Request the services to cache for n seconds (default 24 hrs)
 
 /////////////////////////////
 
@@ -29,7 +30,7 @@ app.get("/:board/thread/:id", async (req, res) => {
   const result = await handleThreadRequest(req, {
     board,
     threadId: id,
-    baseUrl: `${req.protocol}://${req.get('host')}`,
+    baseUrl: `${isHTTPS ? "https" : req.protocol}://${req.get('host')}`,
     allowsImageProxy,
     imageProxySrc,
   });
@@ -51,7 +52,7 @@ app.get("/:board/thread/:id/p:postId", async (req, res) => {
     board,
     threadId: id,
     postId,
-    baseUrl: `${req.protocol}://${req.get('host')}`,
+    baseUrl: `${isHTTPS ? "https" : req.protocol}://${req.get('host')}`,
     allowsImageProxy,
     imageProxySrc,
   });
