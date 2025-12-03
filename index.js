@@ -57,6 +57,14 @@ app.get('/proxy/image', async (req, res) => {
 
     const imageUrl = req.query.url;
 
+    const userAgent = req.headers.get?.('User-Agent') || req.get?.('User-Agent') || '';
+
+    // Check if it's a bot/crawler (for embeds)
+    const isBotRequest = /bot|crawler|spider|facebook|twitter|discord|slack/i.test(userAgent);
+    if (!isBotRequest) {
+        return res.redirect(imageUrl);
+    }
+
     if (!imageUrl) {
         return res.status(400).send('Missing url parameter');
     }
