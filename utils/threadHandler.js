@@ -14,22 +14,22 @@ export const ARCHIVES = [
         api: "arch.b4k.dev",
         board: ["v", "vg", "vm", "vmg", "vp", "vrpg", "vst"],
     },
-    /* // 4plebs has anti-scraping behavior.
     {
         archive: "4plebs",
         api: "archive.4plebs.org",
         board: ["adv", "f", "hr", "mlpol", "mo", "o", "pol", "s4s", "sp", "tg", "trv", "tv", "x"],
     },
-    */
+    /* Warosu currently unsupported, is using fuuka rather than foolfuuka, different API, I can't find documentation anywhere
     {
         archive: "warosu",
         api: "warosu.org",
         board: ["3", "biz", "ck", "diy", "fa", "ic", "jp", "lit", "sci", "vr", "vt"],
     },
-    {
+    */
+    { // fallback, most unreliable, doesn't cache image, etc.
         archive: "Archived.Moe",
         api: "archived.moe",
-        board: ["b", "bant", "cm", "gif", "h", "hc", "hm", "i", "m", "n", "news", "out", "p", "po", "pw", "qa", "qst", "r", "r9k", "s", "soc", "t", "tg", "toy", "u", "vip", "w", "wg", "wsg", "wsr", "xs", "y"],
+        board: ["3", "a", "aco", "adv", "an", "asp", "b", "bant", "biz", "c", "can", "cgl", "ck", "cm", "co", "cock", "con", "d", "diy", "e", "f", "fa", "fap", "fit", "fitlit", "g", "gd", "gif", "h", "hc", "his", "hm", "hr", "i", "ic", "int", "jp", "k", "lgbt", "lit", "m", "mlp", "mlpol", "mo", "mtv", "mu", "n", "news", "o", "out", "outsoc", "p", "po", "pol", "pw", "q", "qa", "qb", "qst", "r", "r9k", "s", "s4s", "sci", "soc", "sp", "spa", "t", "tg", "toy", "trash", "trv", "tv", "u", "v", "vg", "vint", "vip", "vm", "vmg", "vp", "vr", "vrpg", "vst", "vt", "w", "wg", "wsg", "wsr", "x", "xs", "y"],
     },
 ]
 
@@ -118,9 +118,23 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
             if (shouldFetchArchive)
             {
                 const apiURL = `https://${apiDomain}/_/api/chan/post?board=${board}&num=${lookupPostId}`;
-                const apiResponse = await fetch(apiURL);
+                const apiResponse = await fetch(apiURL, {
+                    headers: {
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0 Safari/537.36",
+                        "Accept": "application/json, text/plain, */*",
+                        "Accept-Language": "en-US,en;q=0.9",
+                        "Referer": `https://${apiDomain}/${board}/`,
+                        "Sec-Fetch-Site": "same-origin",
+                        "Sec-Fetch-Mode": "cors",
+                        "Sec-Fetch-Dest": "empty",
+                        "Sec-Ch-Ua": `"Chromium";v="123", "Not.A/Brand";v="24"`,
+                        "Sec-Ch-Ua-Mobile": "?0",
+                        "Sec-Ch-Ua-Platform": "\"Windows\"",
+                    }
+                });
 
                 if (!apiResponse.ok) {
+                    //console.log(apiURL + " failed to response", apiResponse.status, apiResponse.statusText )
                     return { error: 'Thread not found', status: 404 };
                 }
 
@@ -147,7 +161,7 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
                     w: apiData.media?.media_w ? parseInt(apiData.media.media_w) : null,
                     h: apiData.media?.media_h ? parseInt(apiData.media.media_h) : null,
                     // Store original media link as fallback
-                    apiMediaLink: apiData.media?.media_link || null
+                    apiMediaLink: apiData.media?.media_link || apiData.media?.thumb_link|| null
                 };
 
                 // Find the original thread ID
@@ -193,8 +207,17 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
 
         // Convert <br> tags to newlines before sanitizing
         const rawComment = targetPost.com || '';
-        const commentWithLineBreaks = rawComment.replace(/<br\s*\/?>/gi, '\n');
+        let commentWithLineBreaks;
+
+        if(archiveName) { // If what we're parsing is from an archive, then only remove <br/>, no need for replacement
+            commentWithLineBreaks = rawComment.replace(/<br\s*\/?>/gi, '');
+        }
+        else {
+            commentWithLineBreaks = rawComment.replace(/<br\s*\/?>/gi, '\n');
+        }
         const description = sanitizeHtml(commentWithLineBreaks);
+
+        //console.log(rawComment);
 
         // Generate appropriate meta tags based on media type
         let mediaTags = '';
