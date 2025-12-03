@@ -26,7 +26,7 @@ export const ARCHIVES = [
         board: ["3", "biz", "ck", "diy", "fa", "ic", "jp", "lit", "sci", "vr", "vt"],
     },
     */
-    { // fallback, most unreliable, doesn't cache image, etc.
+    { // fallback, most unreliable, doesn't cache image, api returning stub instead of just 404, etc.
         archive: "Archived.Moe",
         api: "archived.moe",
         board: ["3", "a", "aco", "adv", "an", "asp", "b", "bant", "biz", "c", "can", "cgl", "ck", "cm", "co", "cock", "con", "d", "diy", "e", "f", "fa", "fap", "fit", "fitlit", "g", "gd", "gif", "h", "hc", "his", "hm", "hr", "i", "ic", "int", "jp", "k", "lgbt", "lit", "m", "mlp", "mlpol", "mo", "mtv", "mu", "n", "news", "o", "out", "outsoc", "p", "po", "pol", "pw", "q", "qa", "qb", "qst", "r", "r9k", "s", "s4s", "sci", "soc", "sp", "spa", "t", "tg", "toy", "trash", "trv", "tv", "u", "v", "vg", "vint", "vip", "vm", "vmg", "vp", "vr", "vrpg", "vst", "vt", "w", "wg", "wsg", "wsr", "x", "xs", "y"],
@@ -34,10 +34,15 @@ export const ARCHIVES = [
 ]
 
 export const NSFWBoards = ["aco", "b", "bant", "d", "e", "gif", "h", "hc", "hm", "hr", "pol", "r", "r9k", "s", "s4s", "soc", "t", "u", "y"]
+const blueboardColor = "#0026ffff";
+const redboardColor = "#ff0000ff";
 
 export async function handleThreadRequest(request, { board, threadId, postId = null, baseUrl})
 {
-    if (!config.allowNSFWBoards && NSFWBoards.includes(board) || config.blacklistedBoards.includes(board)){
+    const isRedboard = NSFWBoards.includes(board);
+
+
+    if (!config.allowNSFWBoards && isRedboard || config.blacklistedBoards.includes(board)){
         return { error: 'This board is not supported', status: 403 };
     }
     const userAgent = request.headers.get?.('User-Agent') || request.get?.('User-Agent') || '';
@@ -134,7 +139,7 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
                 });
 
                 if (!apiResponse.ok) {
-                    //console.log(apiURL + " failed to response", apiResponse.status, apiResponse.statusText )
+                    console.log(apiURL + " failed to response", apiResponse.status, apiResponse.statusText )
                     return { error: 'Thread not found', status: 404 };
                 }
 
@@ -142,14 +147,20 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
                     ? `https://${apiDomain}/${board}/thread/${lookupPostId}/#q${cleanPostId}`
                     : `https://${apiDomain}/${board}/thread/${lookupPostId}`;
 
+                const apiData = await apiResponse.json();
+
+                // Edge case - when the API returns 200, but passing an error as API instead
+                if (apiData.error) {
+                    console.log(apiURL + " responded with " + apiData.error, apiResponse.status, apiResponse.statusText )
+                    return { error: 'Thread not found', status: 404 };
+                }
+
                 // Passing redirect if a real user
                 if(!isBotRequest) {
                     if (cleanPostId === threadId)
                         return { redirect: redirectUrl };
                     return { redirect: redirectUrl };
                 }
-
-                const apiData = await apiResponse.json();
 
                 // Convert Foolfuuka API format to 4chan API format
                 targetPost = {
@@ -170,6 +181,7 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
             }
 
         } else if (!response.ok) {
+            console.log(apiURL + " failed to response", apiResponse.status, apiResponse.statusText )
             return { error: 'Thread not found', status: 404 };
         } else {
             targetPost = data.posts[0]; // Default to OP
@@ -217,7 +229,6 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
         }
         const description = sanitizeHtml(commentWithLineBreaks);
 
-        //console.log(rawComment);
 
         // Generate appropriate meta tags based on media type
         let mediaTags = '';
@@ -256,6 +267,7 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
                         <meta property="og:site_name" content="${source}">
                         ${mediaTags}
                         <meta http-equiv="refresh" content="0;url=${redirectUrl}">
+                        <meta property="theme-color" content=${isRedboard ? redboardColor : blueboardColor} />
                 </head>
                 </html>`;
 
