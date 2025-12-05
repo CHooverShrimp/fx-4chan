@@ -7,7 +7,7 @@ import * as config from "./config.js";
 const app = express();
 
 app.get("/", (req, res) => {
-  res.redirect("https://boards.4chan.org/");
+  res.redirect(config.rootRedirectURL);
 });
 
 // Issue: can't pass hash fragment to the server. That means we can't pass #p12345678. replace # with /

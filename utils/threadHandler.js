@@ -69,11 +69,9 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
             data = await response.json();
         }
 
-        // Remove 'p' prefix if it exists on the comment ID
+        // Remove any prefix before digits if it exists on the comment ID
         if (postId) {
-            cleanPostId = typeof postId === 'string'
-                ? postId.replace(/^[pq]/, '')
-                : postId;
+            cleanPostId = String(postId).replace(/^\D+/, '');
         }
 
         // Check if comment is not deleted from 4chan
@@ -103,49 +101,54 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
         if ((!response.ok && matchedArchive) || (response.ok && !foundPost && matchedArchive)) {
             const lookupPostId = postId ? cleanPostId : threadId;
 
+            const apiURL = `https://${apiDomain}/_/api/chan/post?board=${board}&num=${lookupPostId}`;
+            const apiResponse = await fetch(apiURL, {
+                headers: {
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0 Safari/537.36",
+                    "Accept": "application/json, text/plain, */*",
+                    "Accept-Language": "en-US,en;q=0.9",
+                    "Referer": `https://${apiDomain}/${board}/`,
+                    "Sec-Fetch-Site": "same-origin",
+                    "Sec-Fetch-Mode": "cors",
+                    "Sec-Fetch-Dest": "empty",
+                    "Sec-Ch-Ua": `"Chromium";v="123", "Not.A/Brand";v="24"`,
+                    "Sec-Ch-Ua-Mobile": "?0",
+                    "Sec-Ch-Ua-Platform": "\"Windows\"",
+                }
+            });
+
             let shouldFetchArchive = true;
 
-            if (response.ok && (lookupPostId === threadId))
+            // Check archive for the comment as well
+            if (response.ok && (lookupPostId !== threadId)) // 4chan thread is alive, post ID is not the same as thread
             {
-                // In this case, the thread is alive, but comment cannot be found on both the archives AND 4chan
-                targetPost = data.posts[0]; // Return OP from 4chan
-                shouldFetchArchive = false;
+                // Check the post if it exists in the archive
+                if (!apiResponse.ok) {
+                    // In this case, the thread is alive, but comment cannot be found on both the archives AND 4chan
+                    targetPost = data.posts[0]; // Return OP from 4chan
+                    shouldFetchArchive = false;
 
-                // Passing only OP
-                redirectUrl = `https://boards.4chan.org/${board}/thread/${threadId}`
+                    // Passing only OP
+                    redirectUrl = `https://boards.4chan.org/${board}/thread/${threadId}`
 
-                // Passing redirect if a real user
-                if(!isBotRequest) {
-                    return { redirect: redirectUrl };
+                    // Passing redirect if a real user
+                    if(!isBotRequest) {
+                        return { redirect: redirectUrl };
+                    }
                 }
             }
 
+            // Otherwise, if the thread is dead, or is alive but the comment is dead but archived, we return the archive
             if (shouldFetchArchive)
             {
-                const apiURL = `https://${apiDomain}/_/api/chan/post?board=${board}&num=${lookupPostId}`;
-                const apiResponse = await fetch(apiURL, {
-                    headers: {
-                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0 Safari/537.36",
-                        "Accept": "application/json, text/plain, */*",
-                        "Accept-Language": "en-US,en;q=0.9",
-                        "Referer": `https://${apiDomain}/${board}/`,
-                        "Sec-Fetch-Site": "same-origin",
-                        "Sec-Fetch-Mode": "cors",
-                        "Sec-Fetch-Dest": "empty",
-                        "Sec-Ch-Ua": `"Chromium";v="123", "Not.A/Brand";v="24"`,
-                        "Sec-Ch-Ua-Mobile": "?0",
-                        "Sec-Ch-Ua-Platform": "\"Windows\"",
-                    }
-                });
-
                 if (!apiResponse.ok) {
                     console.log(apiURL + " failed to response", apiResponse.status, apiResponse.statusText )
                     return { error: 'Thread not found', status: 404 };
                 }
 
-                redirectUrl = foundPost
-                    ? `https://${apiDomain}/${board}/thread/${lookupPostId}/#q${cleanPostId}`
-                    : `https://${apiDomain}/${board}/thread/${lookupPostId}`;
+                redirectUrl = cleanPostId
+                    ? `https://${apiDomain}/${board}/thread/${threadId}/#q${cleanPostId}`
+                    : `https://${apiDomain}/${board}/thread/${threadId}`;
 
                 const apiData = await apiResponse.json();
 
@@ -157,8 +160,6 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
 
                 // Passing redirect if a real user
                 if(!isBotRequest) {
-                    if (cleanPostId === threadId)
-                        return { redirect: redirectUrl };
                     return { redirect: redirectUrl };
                 }
 
@@ -278,24 +279,9 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
     }
 }
 
+// 4chan and foolfuuka already processed enough, we only need to strip away the spans from greentexts
 function sanitizeHtml(html) {
     return html
         .replace(/<[^>]*>/g, '')
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/&amp;/g, '&')
-        .replace(/&quot;/g, '"')
-        .replace(/&#039;/g, "'")
         .trim()
-}
-
-function escapeHtml(text) {
-    const map = {
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#039;'
-    };
-    return text.replace(/[&<>"']/g, m => map[m]);
 }

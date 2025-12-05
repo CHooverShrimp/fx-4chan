@@ -5,7 +5,8 @@ export const isHTTPS = true;
 
 // General Configuration
 export const allowNSFWBoards = true;
-export const blacklistedBoards = []; // If you don't want to proxy a board
+export const blacklistedBoards = []; // If you don't want to proxy a board, example ["a","b"]
+export const rootRedirectURL = "https://github.com/CHooverShrimp/fx-4chan";
 
 // Image Proxying - Some image sources are blocked by services such as Discord. We bypass this by proxying.
 export const allowsImageProxy = true;
