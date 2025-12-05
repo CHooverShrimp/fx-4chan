@@ -218,8 +218,8 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
         const isVideo = targetPost.ext && ['.webm', '.mp4', '.mov'].includes(targetPost.ext.toLowerCase());
 
         const title = postId
-            ? `Post #${postId} in /${board.toUpperCase()}/ Thread #${threadId}`
-            : (targetPost.sub || `/${board.toUpperCase()}/ Thread #${threadId}`);
+            ? `Post #${postId} in /${board.toLowerCase()}/ Thread #${threadId}`
+            : (targetPost.sub || `/${board.toLowerCase()}/ Thread #${threadId}`);
 
         // Convert <br> tags to newlines before sanitizing
         const rawComment = targetPost.com || '';
@@ -268,7 +268,7 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
                         <meta property="og:title" content="${title}">
                         <meta property="og:description" content="${description}">
                         <meta property="og:type" content="${isVideo ? 'video.other' : 'article'}">
-                        <meta property="og:site_name" content="${source}">
+                        <meta property="og:site_name" content="${source} - /${board.toLowerCase()}/">
                         ${mediaTags}
                         <meta http-equiv="refresh" content="0;url=${redirectUrl}">
                         <meta property="theme-color" content=${isRedboard ? redboardColor : blueboardColor} />
