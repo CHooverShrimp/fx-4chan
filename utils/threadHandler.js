@@ -74,16 +74,19 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
             cleanPostId = String(postId).replace(/^\D+/, '');
         }
 
-        // Check if comment is not deleted from 4chan
+        // If looking for a comment in a thread, Check if comment exists on 4chan API
         if (postId && response.ok) {
             foundPost = data.posts.find(post => post.no === parseInt(cleanPostId));
+            if(foundPost) {
+                redirectUrl = `https://boards.4chan.org/${board}/thread/${threadId}#p${cleanPostId}`;
+                if (!isBotRequest)
+                    return { redirect: redirectUrl };
+            }
         }
 
-        // If thread is still alive, returns a redirect
-        if (response.ok) {
-            redirectUrl = foundPost
-                ? `https://boards.4chan.org/${board}/thread/${threadId}#p${cleanPostId}`
-                : `https://boards.4chan.org/${board}/thread/${threadId}`;
+        // If looking for OP only, and is alive
+        if (!postId && response.ok) {
+            redirectUrl = `https://boards.4chan.org/${board}/thread/${threadId}`;
             // Redirect real users to actual 4chan thread
             if (!isBotRequest)
                 return { redirect: redirectUrl };
@@ -97,7 +100,7 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
         }
 
         // If 4chan is kill, foolfuuka fallback
-        // or if 4chan alive, but is targeting a comment post, but le comment dead
+        // or if 4chan alive, but is targeting a comment, but le comment dead
         if ((!response.ok && matchedArchive) || (response.ok && postId && !foundPost && matchedArchive)) {
             const lookupPostId = postId ? cleanPostId : threadId;
 
