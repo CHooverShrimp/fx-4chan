@@ -97,8 +97,8 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
         }
 
         // If 4chan is kill, foolfuuka fallback
-        // or if 4chan alive, but comment dead
-        if ((!response.ok && matchedArchive) || (response.ok && !foundPost && matchedArchive)) {
+        // or if 4chan alive, but is targeting a comment post, but le comment dead
+        if ((!response.ok && matchedArchive) || (response.ok && postId && !foundPost && matchedArchive)) {
             const lookupPostId = postId ? cleanPostId : threadId;
 
             const apiURL = `https://${apiDomain}/_/api/chan/post?board=${board}&num=${lookupPostId}`;
