@@ -64,6 +64,8 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
 
         let archiveName, apiDomain;
 
+        let isArchive = true;
+
         // Checking 4chan API if it's still alive
         if (response.ok) {
             data = await response.json();
@@ -81,6 +83,8 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
                 redirectUrl = `https://boards.4chan.org/${board}/thread/${threadId}#p${cleanPostId}`;
                 if (!isBotRequest)
                     return { redirect: redirectUrl };
+
+                isArchive = false;
             }
         }
 
@@ -90,6 +94,8 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
             // Redirect real users to actual 4chan thread
             if (!isBotRequest)
                 return { redirect: redirectUrl };
+
+            isArchive = false;
         }
 
         // Checks if the board is foolfuuka compliant
@@ -138,6 +144,8 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
                     if(!isBotRequest) {
                         return { redirect: redirectUrl };
                     }
+
+                    isArchive = false;
                 }
             }
 
@@ -225,7 +233,7 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
         const rawComment = targetPost.com || '';
         let commentWithLineBreaks;
 
-        if(archiveName) { // If what we're parsing is from an archive, then only remove <br/>, no need for replacement
+        if(isArchive) { // If what we're parsing is from an archive, then only remove <br/>, no need for replacement
             commentWithLineBreaks = rawComment.replace(/<br\s*\/?>/gi, '');
         }
         else {
@@ -233,6 +241,7 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
         }
         const description = sanitizeHtml(commentWithLineBreaks);
 
+        console.log(description);
 
         // Generate appropriate meta tags based on media type
         let mediaTags = '';
