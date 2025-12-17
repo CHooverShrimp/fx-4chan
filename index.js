@@ -100,4 +100,35 @@ app.get('/proxy/image', async (req, res) => {
     }
 });
 
+// Create the oEmbed endpoint:
+app.get('/oembed', async (req, res) => {
+  const { board, thread, post } = req.query;
+
+  const result = await handleThreadRequest(req, {
+    board,
+    threadId: thread,
+    postId: post,
+    baseUrl: `${config.isHTTPS ? "https" : req.protocol}://${req.get('host')}`,
+    isoembed: true
+  });
+
+  if (result.error) {
+    return res.status(result.status).json({ error: result.error });
+  }
+
+  const { data } = result;
+
+  res.json({
+    type: "rich",
+    version: "1.0",
+    author_name: data.author,
+    provider_name: data.providerName,
+    //provider_url: `https://boards.4chan.org/${data.board}/`,
+    thumbnail_url: data.mediaUrl,
+    thumbnail_width: data.thumbnailWidth,
+    thumbnail_height: data.thumbnailHeight,
+    title: data.title,
+  });
+});
+
 app.listen(config.webPort, () => console.log(`Server running on port ${config.webPort}`));

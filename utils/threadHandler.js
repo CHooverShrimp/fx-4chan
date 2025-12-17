@@ -37,7 +37,7 @@ export const NSFWBoards = ["aco", "b", "bant", "d", "e", "gif", "h", "hc", "hm",
 const blueboardColor = "#0026ffff";
 const redboardColor = "#ff0000ff";
 
-export async function handleThreadRequest(request, { board, threadId, postId = null, baseUrl})
+export async function handleThreadRequest(request, { board, threadId, postId = null, baseUrl, isoembed = false})
 {
     const isRedboard = NSFWBoards.includes(board);
 
@@ -229,6 +229,23 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
             ? `Post #${postId} in /${board.toLowerCase()}/ Thread #${threadId}`
             : (targetPost.sub || `/${board.toLowerCase()}/ Thread #${threadId}`);
 
+        const sourceEmbed = `${source} - /${board.toLowerCase()}/`
+        const author = targetPost.trip ? targetPost.trip : ( targetPost.name ? targetPost.name : "Anonymous")
+
+        if (isoembed) // If is for oembed then we can do early termination
+        {
+            return {
+                data: {
+                    author: author,
+                    providerName: sourceEmbed,
+                    thumbnailUrl: mediaUrl,
+                    thumbnailWidth: targetPost.w,
+                    thumbnailHeight: targetPost.h,
+                    title: title
+                }
+            }
+        }
+
         // Convert <br> tags to newlines before sanitizing
         const rawComment = targetPost.com || '';
         let commentWithLineBreaks;
@@ -241,7 +258,7 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
         }
         const description = sanitizeHtml(commentWithLineBreaks);
 
-        console.log(description);
+        //console.log(description);
 
         // Generate appropriate meta tags based on media type
         let mediaTags = '';
@@ -268,19 +285,24 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
             }
         }
 
+        const oembed= `${baseUrl}/oembed?board=${board}&thread=${threadId}${postId ? '&post=' + postId : ''}`
+
         const html = `
                 <!DOCTYPE html>
                 <html lang="en">
                 <head>
                         <meta charset="utf-8">
                         <title>${title}</title>
+
                         <meta property="og:title" content="${title}">
                         <meta property="og:description" content="${description}">
                         <meta property="og:type" content="${isVideo ? 'video.other' : 'article'}">
-                        <meta property="og:site_name" content="${source} - /${board.toLowerCase()}/">
+                        <meta property="og:site_name" content="${sourceEmbed}">
                         ${mediaTags}
                         <meta http-equiv="refresh" content="0;url=${redirectUrl}">
                         <meta property="theme-color" content=${isRedboard ? redboardColor : blueboardColor} />
+
+                        <link rel="alternate" href="${oembed}" type="application/json+oembed"
                 </head>
                 </html>`;
 
