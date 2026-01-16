@@ -230,7 +230,7 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
             : (targetPost.sub || `/${board.toLowerCase()}/ Thread #${threadId}`);
 
         const sourceEmbed = `${source} - /${board.toLowerCase()}/`
-        const author = targetPost.trip ? targetPost.trip : ( targetPost.name ? targetPost.name : "Anonymous")
+        const author = ( targetPost.name ? targetPost.name : "Anonymous") + (targetPost.trip ? " - " + targetPost.trip : "")
 
         if (isoembed) // If is for oembed then we can do early termination
         {
