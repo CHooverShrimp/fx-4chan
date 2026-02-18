@@ -34,7 +34,7 @@ There's a setting for proxying images. This serves only to proxy to another serv
 * The second line is the name of the poster.
 * The third line is the name of the post (or post ID for comments).
 * Embeds video and image at the bottom.
-* THe color to the left will tell you if it's from a red board or a blue board (it's a red board on the above example).
+* The color to the left signify if it's from a red board or a blue board (it's a red board on the above example).
 
 
 ### Warning: due to a quirk in how urls are handled, we can't parse hash fragments (such as 12470187#p12470355) which are typically seen on comment urls
