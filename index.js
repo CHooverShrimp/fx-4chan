@@ -124,7 +124,7 @@ app.get('/oembed', async (req, res) => {
     author_name: data.author,
     provider_name: data.providerName,
     //provider_url: `https://boards.4chan.org/${data.board}/`,
-    thumbnail_url: data.mediaUrl,
+    thumbnail_url: data.thumbnailUrl,
     thumbnail_width: data.thumbnailWidth,
     thumbnail_height: data.thumbnailHeight,
     title: data.title,
