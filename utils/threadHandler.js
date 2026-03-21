@@ -415,15 +415,7 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
                     targetPost.tim ? `https://i.4cdn.org/${board}/${targetPost.tim}s.jpg` : null
                 );
 
-                if (description && description.length > 0 && thumbUrl) {
-                    // Image fallback — description will be visible on Telegram and other OG consumers
-                    mediaTags = `
-                        <meta property="og:image" content="${thumbUrl}">
-                        <meta property="og:image:width" content="${targetPost.w || ''}">
-                        <meta property="og:image:height" content="${targetPost.h || ''}">
-                        <meta name="twitter:card" content="summary_large_image">
-                        <meta name="twitter:image" content="${thumbUrl}">`;
-                } else {
+
                     // No text — full video embed is fine
                     mediaTags = `
                         <meta property="og:video" content="${mediaUrl}">
@@ -434,7 +426,7 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
                         <meta name="twitter:player" content="${mediaUrl}">
                         <meta name="twitter:player:width" content="${targetPost.w || 640}">
                         <meta name="twitter:player:height" content="${targetPost.h || 480}">`;
-                }
+
             } else {
                 // Image meta tags
                 mediaTags = `
