@@ -63,35 +63,47 @@ export function buildActivityStatus({ board, threadId, postId, targetPost, media
     const sourceEmbed = `${source} - /${board.toLowerCase()}/`;
     const author = (targetPost.name || 'Anonymous') + (targetPost.trip ? ' - ' + targetPost.trip : '');
 
-    // Build the content field — Mastodon uses HTML here, Discord renders it as the post body.
-    // title needs escaping (comes from raw 4chan sub field), but description is already
-    // plain text after sanitizeHtml, so only escape the title to avoid double-encoding.
+    // Build the content field — Mastodon uses HTML here, Discord renders it as the post body
     const contentHtml = `<p><strong>${escapeHtml(title)}</strong></p>` +
-        (description ? `<p>${description}</p>` : '');
+        (description ? `<p>${escapeHtml(description)}</p>` : '');
 
     // Build media_attachments array in Mastodon format
     const mediaAttachments = [];
     if (mediaUrl) {
-        // For videos, use thumbnail as preview_url if available (4chan stores thumb as {tim}s.jpg)
+        // For videos, use thumbnail as preview_url — must be a JPEG, not the video URL itself.
+        // 4chan stores thumbnails at {tim}s.jpg for live threads.
+        // Discord uses preview_url as the thumbnail image and url as the playable source.
         const thumbUrl = (!targetPost.apiMediaLink && targetPost.tim)
             ? `https://i.4cdn.org/${board}/${targetPost.tim}s.jpg`
-            : (targetPost.thumbLink || mediaUrl);
+            : (targetPost.thumbLink || null);
 
-        mediaAttachments.push({
+        const attachment = {
             id: String(targetPost.no),
-            type: isVideo ? 'video' : 'image',
+            type: isVideo ? 'gifv' : 'image', // 'gifv' is Mastodon's type for autoplaying video — Discord renders it with a play button
             url: mediaUrl,
-            preview_url: thumbUrl,
+            preview_url: thumbUrl || mediaUrl,
             remote_url: null,
+            text_url: mediaUrl,
             meta: {
                 original: {
-                    width: targetPost.w || null,
-                    height: targetPost.h || null,
-                }
+                    width: targetPost.w || 640,
+                    height: targetPost.h || 480,
+                    frame_rate: '25/1',
+                    duration: null,
+                    bitrate: null,
+                },
+                small: {
+                    width: targetPost.w || 640,
+                    height: targetPost.h || 480,
+                    size: `${targetPost.w || 640}x${targetPost.h || 480}`,
+                    aspect: (targetPost.w && targetPost.h) ? targetPost.w / targetPost.h : 1.778,
+                },
             },
             description: null,
             blurhash: null,
-        });
+        };
+
+        mediaAttachments.push(attachment);
     }
 
     const postUrl = postId
