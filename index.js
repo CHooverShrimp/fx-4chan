@@ -1,7 +1,7 @@
 // index.js - Express version
 
 import express from "express";
-import { handleThreadRequest } from "./utils/threadHandler.js";
+import { handleThreadRequest, buildActivityStatus } from "./utils/threadHandler.js";
 import * as config from "./config.js";
 
 const app = express();
@@ -9,6 +9,13 @@ const app = express();
 app.get("/", (req, res) => {
   res.redirect(config.rootRedirectURL);
 });
+
+// Helper: set the Mastodon Activity Link header so Discord uses the Activity embed path
+// Discord detects this header and fetches the activity URL as a Mastodon API v1 status,
+// which is what allows both video and text to appear in the embed simultaneously.
+function setActivityLinkHeader(res, activityUrl) {
+    res.setHeader('Link', `<${activityUrl}>; rel="alternate"; type="application/json+oembed"`);
+}
 
 // Issue: can't pass hash fragment to the server. That means we can't pass #p12345678. replace # with /
 
@@ -28,6 +35,12 @@ app.get("/:board/thread/:id", async (req, res) => {
   if (result.error) {
     return res.status(result.status).send(result.error);
   }
+
+  // For Discord specifically, set the Link header so it uses the Activity embed path
+  if (result.isDiscord && result.activityUrl) {
+    setActivityLinkHeader(res, result.activityUrl);
+  }
+
   res.send(result.html);
 });
 
@@ -48,7 +61,34 @@ app.get("/:board/thread/:id/p:postId", async (req, res) => {
   if (result.error) {
     return res.status(result.status).send(result.error);
   }
+
+  if (result.isDiscord && result.activityUrl) {
+    setActivityLinkHeader(res, result.activityUrl);
+  }
+
   res.send(result.html);
+});
+
+// Activity endpoint — returns Mastodon API v1-compatible status JSON.
+// Discord fetches this when it sees the Link header pointing here.
+app.get('/activity', async (req, res) => {
+  const { board, thread, post } = req.query;
+
+  const result = await handleThreadRequest(req, {
+    board,
+    threadId: thread,
+    postId: post,
+    baseUrl: `${config.isHTTPS ? "https" : req.protocol}://${req.get('host')}`,
+    isActivity: true,
+  });
+
+  if (result.error) {
+    return res.status(result.status).json({ error: result.error });
+  }
+
+  // Discord expects Mastodon API content type
+  res.setHeader('Content-Type', 'application/json');
+  res.json(result.activity);
 });
 
 app.get('/proxy/image', async (req, res) => {
@@ -100,7 +140,7 @@ app.get('/proxy/image', async (req, res) => {
     }
 });
 
-// Create the oEmbed endpoint:
+// oEmbed endpoint — used by Telegram and other platforms that support oEmbed
 app.get('/oembed', async (req, res) => {
   const { board, thread, post } = req.query;
 

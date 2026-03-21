@@ -37,7 +37,112 @@ export const NSFWBoards = ["aco", "b", "bant", "d", "e", "gif", "h", "hc", "hm",
 const blueboardColor = "#0026ffff";
 const redboardColor = "#ff0000ff";
 
-export async function handleThreadRequest(request, { board, threadId, postId = null, baseUrl, isoembed = false})
+// Detect Discord's bot user agent specifically
+// Discord uses its own UA when fetching embeds, distinct from generic bots
+function isDiscordBot(userAgent) {
+    return /Discordbot/i.test(userAgent);
+}
+
+// Build a Mastodon API v1-compatible status JSON object.
+// Discord fetches this when it sees the Link: <url>; rel="alternate" header
+// pointing to a Mastodon instance. This is what allows video + text together.
+export function buildActivityStatus({ board, threadId, postId, targetPost, mediaUrl, source, isArchive, baseUrl }) {
+    const isVideo = targetPost.ext && ['.webm', '.mp4', '.mov'].includes(targetPost.ext.toLowerCase());
+    const isRedboard = NSFWBoards.includes(board);
+
+    const rawComment = targetPost.com || '';
+    const commentText = isArchive
+        ? rawComment.replace(/<br\s*\/?>/gi, '')
+        : rawComment.replace(/<br\s*\/?>/gi, '\n');
+    const description = sanitizeHtml(commentText);
+
+    const title = postId
+        ? `Post #${postId} in /${board.toLowerCase()}/ Thread #${threadId}`
+        : (targetPost.sub || `/${board.toLowerCase()}/ Thread #${threadId}`);
+
+    const sourceEmbed = `${source} - /${board.toLowerCase()}/`;
+    const author = (targetPost.name || 'Anonymous') + (targetPost.trip ? ' - ' + targetPost.trip : '');
+
+    // Build the content field — Mastodon uses HTML here, Discord renders it as the post body
+    const contentHtml = `<p><strong>${escapeHtml(title)}</strong></p>` +
+        (description ? `<p>${escapeHtml(description)}</p>` : '');
+
+    // Build media_attachments array in Mastodon format
+    const mediaAttachments = [];
+    if (mediaUrl) {
+        // For videos, use thumbnail as preview_url if available (4chan stores thumb as {tim}s.jpg)
+        const thumbUrl = (!targetPost.apiMediaLink && targetPost.tim)
+            ? `https://i.4cdn.org/${board}/${targetPost.tim}s.jpg`
+            : (targetPost.thumbLink || mediaUrl);
+
+        mediaAttachments.push({
+            id: String(targetPost.no),
+            type: isVideo ? 'video' : 'image',
+            url: mediaUrl,
+            preview_url: thumbUrl,
+            remote_url: null,
+            meta: {
+                original: {
+                    width: targetPost.w || null,
+                    height: targetPost.h || null,
+                }
+            },
+            description: null,
+            blurhash: null,
+        });
+    }
+
+    const postUrl = postId
+        ? `${baseUrl}/${board}/thread/${threadId}/p${postId}`
+        : `${baseUrl}/${board}/thread/${threadId}`;
+
+    // Mastodon v1 Status object — Discord reads these fields
+    return {
+        id: String(targetPost.no),
+        created_at: new Date().toISOString(),
+        in_reply_to_id: null,
+        in_reply_to_account_id: null,
+        sensitive: isRedboard,
+        spoiler_text: '',
+        visibility: 'public',
+        language: 'en',
+        uri: postUrl,
+        url: postUrl,
+        replies_count: 0,
+        reblogs_count: 0,
+        favourites_count: 0,
+        content: contentHtml,
+        reblog: null,
+        application: null,
+        account: {
+            id: String(targetPost.no),
+            username: author.replace(/\s/g, '_'),
+            acct: author.replace(/\s/g, '_'),
+            display_name: author,
+            locked: false,
+            created_at: new Date().toISOString(),
+            followers_count: 0,
+            following_count: 0,
+            statuses_count: 0,
+            note: sourceEmbed,
+            url: postUrl,
+            avatar: `${baseUrl}/favicon.ico`,
+            avatar_static: `${baseUrl}/favicon.ico`,
+            header: '',
+            header_static: '',
+            emojis: [],
+            fields: [],
+        },
+        media_attachments: mediaAttachments,
+        mentions: [],
+        tags: [],
+        emojis: [],
+        card: null,
+        poll: null,
+    };
+}
+
+export async function handleThreadRequest(request, { board, threadId, postId = null, baseUrl, isoembed = false, isActivity = false })
 {
     const isRedboard = NSFWBoards.includes(board);
 
@@ -47,6 +152,8 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
     }
     const userAgent = request.headers.get?.('User-Agent') || request.get?.('User-Agent') || '';
 
+    // Check if it's Discord specifically (for Activity embed path)
+    const isDiscord = isDiscordBot(userAgent);
     // Check if it's a bot/crawler (for embeds)
     const isBotRequest = /bot|crawler|spider|facebook|twitter|discord|slack/i.test(userAgent);
 
@@ -184,7 +291,9 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
                     w: apiData.media?.media_w ? parseInt(apiData.media.media_w) : null,
                     h: apiData.media?.media_h ? parseInt(apiData.media.media_h) : null,
                     // Store original media link as fallback
-                    apiMediaLink: apiData.media?.media_link || apiData.media?.thumb_link|| null
+                    apiMediaLink: apiData.media?.media_link || apiData.media?.thumb_link|| null,
+                    // Store thumb separately so we can use it as og:image for video posts with text
+                    thumbLink: apiData.media?.thumb_link || null,
                 };
 
                 // Find the original thread ID
@@ -232,6 +341,41 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
         const sourceEmbed = `${source} - /${board.toLowerCase()}/`
         const author = ( targetPost.name ? targetPost.name : "Anonymous") + (targetPost.trip ? " - " + targetPost.trip : "")
 
+        if (isoembed) // If is for oembed then we can do early termination
+        {
+            const rawComment = targetPost.com || '';
+            const commentText = isArchive
+                ? rawComment.replace(/<br\s*\/?>/gi, '')
+                : rawComment.replace(/<br\s*\/?>/gi, '\n');
+
+            // For video posts use the thumbnail, not the video URL itself
+            const thumbUrl = targetPost.thumbLink || (
+                targetPost.tim ? `https://i.4cdn.org/${board}/${targetPost.tim}s.jpg` : mediaUrl
+            );
+
+            return {
+                data: {
+                    author: author,
+                    providerName: sourceEmbed,
+                    thumbnailUrl: isVideo ? thumbUrl : mediaUrl, // fixed: was always mediaUrl (broke for video)
+                    thumbnailWidth: targetPost.w,
+                    thumbnailHeight: targetPost.h,
+                    title: title,
+                    description: sanitizeHtml(commentText), // added: lets oEmbed consumers show the post text
+                }
+            }
+        }
+
+        // If Discord is fetching the Activity endpoint, return Mastodon-compatible JSON.
+        // This is what allows video + text to coexist in Discord embeds.
+        if (isActivity)
+        {
+            const activityStatus = buildActivityStatus({
+                board, threadId, postId, targetPost, mediaUrl, source, isArchive, baseUrl
+            });
+            return { activity: activityStatus };
+        }
+
         // Convert <br> tags to newlines before sanitizing
         const rawComment = targetPost.com || '';
         let commentWithLineBreaks;
@@ -244,29 +388,30 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
         }
         const description = sanitizeHtml(commentWithLineBreaks);
 
-        if (isoembed) // If is for oembed then we can do early termination
-        {
-            return {
-                data: {
-                    author: author,
-                    providerName: sourceEmbed,
-                    thumbnailUrl: mediaUrl,
-                    thumbnailWidth: targetPost.w,
-                    thumbnailHeight: targetPost.h,
-                    title: title,
-                    description: description,
-                }
-            }
-        }
-
         //console.log(description);
 
         // Generate appropriate meta tags based on media type
         let mediaTags = '';
         if (mediaUrl) {
             if (isVideo) {
-                // Video meta tags
-                mediaTags = `
+                // For video posts with text: use thumbnail as og:image so description shows on Telegram etc.
+                // Discord bypasses this entirely via the Activity embed path (Link header).
+                // For video-only posts (no comment): use full og:video embed.
+                const thumbUrl = targetPost.thumbLink || (
+                    targetPost.tim ? `https://i.4cdn.org/${board}/${targetPost.tim}s.jpg` : null
+                );
+
+                if (description && description.length > 0 && thumbUrl) {
+                    // Image fallback — description will be visible on Telegram and other OG consumers
+                    mediaTags = `
+                        <meta property="og:image" content="${thumbUrl}">
+                        <meta property="og:image:width" content="${targetPost.w || ''}">
+                        <meta property="og:image:height" content="${targetPost.h || ''}">
+                        <meta name="twitter:card" content="summary_large_image">
+                        <meta name="twitter:image" content="${thumbUrl}">`;
+                } else {
+                    // No text — full video embed is fine
+                    mediaTags = `
                         <meta property="og:video" content="${mediaUrl}">
                         <meta property="og:video:type" content="video/${targetPost.ext.slice(1)}">
                         <meta property="og:video:width" content="${targetPost.w || 640}">
@@ -275,6 +420,7 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
                         <meta name="twitter:player" content="${mediaUrl}">
                         <meta name="twitter:player:width" content="${targetPost.w || 640}">
                         <meta name="twitter:player:height" content="${targetPost.h || 480}">`;
+                }
             } else {
                 // Image meta tags
                 mediaTags = `
@@ -287,6 +433,10 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
         }
 
         const oembed= `${baseUrl}/oembed?board=${board}&thread=${threadId}${postId ? '&post=' + postId : ''}`
+
+        // The Activity endpoint URL — Discord fetches this as a Mastodon API v1 status,
+        // which is what allows both video and text to appear in the Discord embed simultaneously.
+        const activityUrl = `${baseUrl}/activity?board=${board}&thread=${threadId}${postId ? '&post=' + postId : ''}`;
 
         const html = `
                 <!DOCTYPE html>
@@ -307,7 +457,8 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
                 </head>
                 </html>`;
 
-        return { html };
+        // Pass activityUrl and isDiscord back so index.js can set the Link header for Discord bots
+        return { html, activityUrl, isDiscord };
     } catch (err) {
         console.error(err);
         return { error: 'Error fetching thread', status: 500 };
@@ -319,4 +470,13 @@ function sanitizeHtml(html) {
     return html
         .replace(/<[^>]*>/g, '')
         .trim()
+}
+
+// Used when building Activity embed HTML content — prevents XSS in the Mastodon JSON content field
+function escapeHtml(str) {
+    return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
 }
