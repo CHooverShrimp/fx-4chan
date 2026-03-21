@@ -14,7 +14,7 @@ app.get("/", (req, res) => {
 // Discord detects this header and fetches the activity URL as a Mastodon API v1 status,
 // which is what allows both video and text to appear in the embed simultaneously.
 function setActivityLinkHeader(res, activityUrl) {
-    res.setHeader('Link', `<${activityUrl}>; rel="alternate"; type="application/json+oembed"`);
+    res.setHeader('Link', `<${activityUrl}>; rel="alternate"; type="application/activity+json"`);
 }
 
 // Issue: can't pass hash fragment to the server. That means we can't pass #p12345678. replace # with /
@@ -62,6 +62,7 @@ app.get("/:board/thread/:id/p:postId", async (req, res) => {
     return res.status(result.status).send(result.error);
   }
 
+  // For Discord specifically, set the Link header so it uses the Activity embed path
   if (result.isDiscord && result.activityUrl) {
     setActivityLinkHeader(res, result.activityUrl);
   }
@@ -70,7 +71,8 @@ app.get("/:board/thread/:id/p:postId", async (req, res) => {
 });
 
 // Activity endpoint — returns Mastodon API v1-compatible status JSON.
-// Discord fetches this when it sees the Link header pointing here.
+// Discord fetches this when it sees the Link header set on the main embed page.
+// This is the key to showing video + text together in Discord embeds.
 app.get('/activity', async (req, res) => {
   const { board, thread, post } = req.query;
 
@@ -140,7 +142,7 @@ app.get('/proxy/image', async (req, res) => {
     }
 });
 
-// oEmbed endpoint — used by Telegram and other platforms that support oEmbed
+// Create the oEmbed endpoint:
 app.get('/oembed', async (req, res) => {
   const { board, thread, post } = req.query;
 
@@ -170,6 +172,32 @@ app.get('/oembed', async (req, res) => {
     title: data.title,
     description: data.description,
   });
+});
+
+// These two endpoints make Discord classify this server as a Mastodon instance.
+// Without them, Discord ignores the Link: rel="alternate" activity header entirely
+// and falls back to OG tags — which is why video posts were only showing a thumbnail.
+
+// nodeinfo discovery — tells Discord where to find the nodeinfo document
+app.get('/.well-known/nodeinfo', (req, res) => {
+    const baseUrl = `${config.isHTTPS ? "https" : req.protocol}://${req.get('host')}`;
+    res.json({
+        links: [{
+            rel: 'http://nodeinfo.diaspora.software/ns/schema/2.0',
+            href: `${baseUrl}/nodeinfo/2.0`,
+        }]
+    });
+});
+
+// nodeinfo document — identifies this server as a Mastodon-compatible instance
+app.get('/nodeinfo/2.0', (req, res) => {
+    res.json({
+        version: '2.0',
+        software: { name: 'mastodon', version: '4.0.0' },
+        protocols: ['activitypub'],
+        usage: { users: { total: 1 } },
+        openRegistrations: false,
+    });
 });
 
 app.listen(config.webPort, () => console.log(`Server running on port ${config.webPort}`));
