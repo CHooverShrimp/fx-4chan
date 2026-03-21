@@ -232,20 +232,6 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
         const sourceEmbed = `${source} - /${board.toLowerCase()}/`
         const author = ( targetPost.name ? targetPost.name : "Anonymous") + (targetPost.trip ? " - " + targetPost.trip : "")
 
-        if (isoembed) // If is for oembed then we can do early termination
-        {
-            return {
-                data: {
-                    author: author,
-                    providerName: sourceEmbed,
-                    thumbnailUrl: mediaUrl,
-                    thumbnailWidth: targetPost.w,
-                    thumbnailHeight: targetPost.h,
-                    title: title
-                }
-            }
-        }
-
         // Convert <br> tags to newlines before sanitizing
         const rawComment = targetPost.com || '';
         let commentWithLineBreaks;
@@ -257,6 +243,21 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
             commentWithLineBreaks = rawComment.replace(/<br\s*\/?>/gi, '\n');
         }
         const description = sanitizeHtml(commentWithLineBreaks);
+
+        if (isoembed) // If is for oembed then we can do early termination
+        {
+            return {
+                data: {
+                    author: author,
+                    providerName: sourceEmbed,
+                    thumbnailUrl: mediaUrl,
+                    thumbnailWidth: targetPost.w,
+                    thumbnailHeight: targetPost.h,
+                    title: title,
+                    description: description
+                }
+            }
+        }
 
         //console.log(description);
 
