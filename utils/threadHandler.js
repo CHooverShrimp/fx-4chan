@@ -394,24 +394,9 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
         let mediaTags = '';
         if (mediaUrl) {
             if (isVideo) {
-                // For video posts with text: use thumbnail as og:image so description shows on Telegram etc.
-                // Discord bypasses this entirely via the Activity embed path (Link header).
-                // For video-only posts (no comment): use full og:video embed.
-                const thumbUrl = targetPost.thumbLink || (
-                    targetPost.tim ? `https://i.4cdn.org/${board}/${targetPost.tim}s.jpg` : null
-                );
-
-                if (description && description.length > 0 && thumbUrl) {
-                    // Image fallback — description will be visible on Telegram and other OG consumers
-                    mediaTags = `
-                        <meta property="og:image" content="${thumbUrl}">
-                        <meta property="og:image:width" content="${targetPost.w || ''}">
-                        <meta property="og:image:height" content="${targetPost.h || ''}">
-                        <meta name="twitter:card" content="summary_large_image">
-                        <meta name="twitter:image" content="${thumbUrl}">`;
-                } else {
-                    // No text — full video embed is fine
-                    mediaTags = `
+                // Discord uses the Activity embed path (Link header) for all video posts,
+                // so it never reads these OG tags. Other bots (Telegram etc.) get og:video here.
+                mediaTags = `
                         <meta property="og:video" content="${mediaUrl}">
                         <meta property="og:video:type" content="video/${targetPost.ext.slice(1)}">
                         <meta property="og:video:width" content="${targetPost.w || 640}">
@@ -420,7 +405,6 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
                         <meta name="twitter:player" content="${mediaUrl}">
                         <meta name="twitter:player:width" content="${targetPost.w || 640}">
                         <meta name="twitter:player:height" content="${targetPost.h || 480}">`;
-                }
             } else {
                 // Image meta tags
                 mediaTags = `
