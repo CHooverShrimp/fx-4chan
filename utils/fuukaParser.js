@@ -47,17 +47,9 @@ function parsePostSegment(segment, no, subnum, apiDomain) {
         h = parseInt(fileMatch[2]);
     }
 
-    // Prefer the full-size image link that wraps the thumbnail; fall back
-    // to the thumbnail itself if no wrapping anchor is found (e.g. text-only
-    // posts never have either, so mediaUrl stays null).
     let mediaUrl = null;
-    const fullLinkMatch = segment.match(/<a[^>]+href="([^"]+)"[^>]*>\s*<img class="thumb"/);
-    if (fullLinkMatch) {
-        mediaUrl = fullLinkMatch[1];
-    } else {
-        const thumbMatch = segment.match(/<img class="thumb" src="([^"]+)"/);
-        if (thumbMatch) mediaUrl = thumbMatch[1];
-    }
+    const linkMatch = segment.match(/<a[^>]+href="([^"]+)"[^>]*>\s*<img[^>]*\bclass="thumb"/);
+    if (linkMatch) mediaUrl = linkMatch[1];
 
     // Normalize protocol-relative / relative URLs against the archive's own domain
     if (mediaUrl && mediaUrl.startsWith("//")) {
@@ -75,6 +67,8 @@ function parsePostSegment(segment, no, subnum, apiDomain) {
             ext = filename.slice(dot); // includes the leading dot
         }
     }
+
+    console.log(mediaUrl)
 
     let name = "Anonymous";
     const nameMatch = segment.match(/<span class="postername[^"]*">([\s\S]*?)<\/span>/);
