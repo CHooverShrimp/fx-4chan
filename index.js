@@ -32,8 +32,9 @@ app.get("/:board/thread/:id", async (req, res) => {
 });
 
 // Handling posts in a thread
-app.get("/:board/thread/:id/p:postId", async (req, res) => {
-  const { board, id, postId } = req.params;
+app.get("/:board/thread/:id/:postId([a-zA-Z]\\d+)", async (req, res) => {
+  const { board, id } = req.params;
+  const postId = req.params.postId.replace(/^[a-zA-Z]/, '');
 
   const result = await handleThreadRequest(req, {
     board,
