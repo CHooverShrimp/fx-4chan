@@ -68,7 +68,7 @@ function parsePostSegment(segment, no, subnum, apiDomain) {
         }
     }
 
-    console.log(mediaUrl)
+    //console.log(mediaUrl)
 
     let name = "Anonymous";
     const nameMatch = segment.match(/<span class="postername[^"]*">([\s\S]*?)<\/span>/);
@@ -93,7 +93,7 @@ function parsePostSegment(segment, no, subnum, apiDomain) {
 
     let com = "";
     const comMatch = segment.match(/<blockquote>\s*<p>([\s\S]*?)<\/p>\s*<\/blockquote>/);
-    if (comMatch) com = comMatch[1];
+    if (comMatch) com = comMatch[1].replace(/<br\s*\/?>/gi, "\n");
 
     return {
         no: parseInt(no),
