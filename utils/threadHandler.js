@@ -1,34 +1,40 @@
 // utils/threadHandler.js
 // Shared logic between Express and Workers versions
 import * as config from "../config.js";
+import { fetchFuukaThread, findFuukaPost } from "./fuukaParser.js";
 
 //Foolfuuka - Asagi Fetcher framework
 export const ARCHIVES = [
     {
         archive: "Desuarchive",
         api: "desuarchive.org",
+        tech: "foolfuuka",
         board: ["a", "aco", "an", "c", "cgl", "co", "d", "fit", "g", "his", "int", "k", "m", "mlp", "mu", "q", "qa", "r9k", "tg", "trash", "vr", "wsg"],
     },
     {
         archive: "b4k",
         api: "arch.b4k.dev",
+        tech: "foolfuuka",
         board: ["v", "vg", "vm", "vmg", "vp", "vrpg", "vst"],
     },
     {
         archive: "4plebs",
         api: "archive.4plebs.org",
+        tech: "foolfuuka",
         board: ["adv", "f", "hr", "mlpol", "mo", "o", "pol", "s4s", "sp", "tg", "trv", "tv", "x"],
     },
-    /* Warosu currently unsupported, is using fuuka rather than foolfuuka, different API, I can't find documentation anywhere
+    // Warosu runs the older "fuuka" archiver (not foolfuuka) and has no JSON API,
+    // so it's handled separately via utils/fuukaParser.js
     {
         archive: "warosu",
         api: "warosu.org",
+        tech: "fuuka",
         board: ["3", "biz", "ck", "diy", "fa", "ic", "jp", "lit", "sci", "vr", "vt"],
     },
-    */
     { // fallback, most unreliable, doesn't cache image, api returning stub instead of just 404, etc.
         archive: "Archived.Moe",
         api: "archived.moe",
+        tech: "foolfuuka",
         board: ["3", "a", "aco", "adv", "an", "asp", "b", "bant", "biz", "c", "can", "cgl", "ck", "cm", "co", "cock", "con", "d", "diy", "e", "f", "fa", "fap", "fit", "fitlit", "g", "gd", "gif", "h", "hc", "his", "hm", "hr", "i", "ic", "int", "jp", "k", "lgbt", "lit", "m", "mlp", "mlpol", "mo", "mtv", "mu", "n", "news", "o", "out", "outsoc", "p", "po", "pol", "pw", "q", "qa", "qb", "qst", "r", "r9k", "s", "s4s", "sci", "soc", "sp", "spa", "t", "tg", "toy", "trash", "trv", "tv", "u", "v", "vg", "vint", "vip", "vm", "vmg", "vp", "vr", "vrpg", "vst", "vt", "w", "wg", "wsg", "wsr", "x", "xs", "y"],
     },
 ]
@@ -107,91 +113,130 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
 
         // If 4chan is kill, foolfuuka fallback
         // or if 4chan alive, but is targeting a comment, but le comment dead
-        if ((!response.ok && matchedArchive) || (response.ok && postId && !foundPost && matchedArchive)) {
+        if ((!response.ok && matchedArchive) || (response.ok && postId && !foundPost && matchedArchive))
+        {
             const lookupPostId = postId ? cleanPostId : threadId;
 
-            const apiURL = `https://${apiDomain}/_/api/chan/post?board=${board}&num=${lookupPostId}`;
-            const apiResponse = await fetch(apiURL, {
-                headers: {
-                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0 Safari/537.36",
-                    "Accept": "application/json, text/plain, */*",
-                    "Accept-Language": "en-US,en;q=0.9",
-                    "Referer": `https://${apiDomain}/${board}/`,
-                    "Sec-Fetch-Site": "same-origin",
-                    "Sec-Fetch-Mode": "cors",
-                    "Sec-Fetch-Dest": "empty",
-                    "Sec-Ch-Ua": `"Chromium";v="123", "Not.A/Brand";v="24"`,
-                    "Sec-Ch-Ua-Mobile": "?0",
-                    "Sec-Ch-Ua-Platform": "\"Windows\"",
-                }
-            });
-
-            let shouldFetchArchive = true;
-
-            // Check archive for the comment as well
-            if (response.ok && (lookupPostId !== threadId)) // 4chan thread is alive, post ID is not the same as thread
+            // Fuuka-based archives (e.g. warosu) have no JSON API, unlike
+            // foolfuuka, so we fetch the rendered thread page and scrape it.
+            if (matchedArchive.tech === 'fuuka')
             {
-                // Check the post if it exists in the archive
-                if (!apiResponse.ok) {
-                    // In this case, the thread is alive, but comment cannot be found on both the archives AND 4chan
-                    targetPost = data.posts[0]; // Return OP from 4chan
-                    shouldFetchArchive = false;
+                const fuukaPosts = await fetchFuukaThread(apiDomain, board, threadId);
+                const fuukaPost = fuukaPosts ? findFuukaPost(fuukaPosts, lookupPostId) : null;
 
-                    // Passing only OP
-                    redirectUrl = `https://boards.4chan.org/${board}/thread/${threadId}`
+                if (!fuukaPost) {
+                    // Thread alive on 4chan but comment missing everywhere -> fall back to OP
+                    if (response.ok && (lookupPostId !== threadId)) {
+                        targetPost = data.posts[0]; // Return OP from 4chan
+                        redirectUrl = `https://boards.4chan.org/${board}/thread/${threadId}`
+
+                        if (!isBotRequest) {
+                            return { redirect: redirectUrl };
+                        }
+
+                        isArchive = false;
+                    } else {
+                        return { error: 'Thread not found', status: 404 };
+                    }
+                } else {
+                    redirectUrl = cleanPostId
+                        ? `https://${apiDomain}/${board}/thread/${threadId}/#p${cleanPostId}`
+                        : `https://${apiDomain}/${board}/thread/${threadId}`;
+
+                    // Passing redirect if a real user
+                    if (!isBotRequest) {
+                        return { redirect: redirectUrl };
+                    }
+
+                    targetPost = fuukaPost;
+                    source = archiveName;
+                }
+            }
+            else if (matchedArchive.tech === 'foolfuuka')
+            {
+                const apiURL = `https://${apiDomain}/_/api/chan/post?board=${board}&num=${lookupPostId}`;
+                const apiResponse = await fetch(apiURL, {
+                    headers: {
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0 Safari/537.36",
+                        "Accept": "application/json, text/plain, */*",
+                        "Accept-Language": "en-US,en;q=0.9",
+                        "Referer": `https://${apiDomain}/${board}/`,
+                        "Sec-Fetch-Site": "same-origin",
+                        "Sec-Fetch-Mode": "cors",
+                        "Sec-Fetch-Dest": "empty",
+                        "Sec-Ch-Ua": `"Chromium";v="123", "Not.A/Brand";v="24"`,
+                        "Sec-Ch-Ua-Mobile": "?0",
+                        "Sec-Ch-Ua-Platform": "\"Windows\"",
+                    }
+                });
+
+                let shouldFetchArchive = true;
+
+                // Check archive for the comment as well
+                if (response.ok && (lookupPostId !== threadId)) // 4chan thread is alive, post ID is not the same as thread
+                {
+                    // Check the post if it exists in the archive
+                    if (!apiResponse.ok) {
+                        // In this case, the thread is alive, but comment cannot be found on both the archives AND 4chan
+                        targetPost = data.posts[0]; // Return OP from 4chan
+                        shouldFetchArchive = false;
+
+                        // Passing only OP
+                        redirectUrl = `https://boards.4chan.org/${board}/thread/${threadId}`
+
+                        // Passing redirect if a real user
+                        if(!isBotRequest) {
+                            return { redirect: redirectUrl };
+                        }
+
+                        isArchive = false;
+                    }
+                }
+
+                // Otherwise, if the thread is dead, or is alive but the comment is dead but archived, we return the archive
+                if (shouldFetchArchive)
+                {
+                    if (!apiResponse.ok) {
+                        console.log(apiURL + " failed to response", apiResponse.status, apiResponse.statusText )
+                        return { error: 'Thread not found', status: 404 };
+                    }
+
+                    redirectUrl = cleanPostId
+                        ? `https://${apiDomain}/${board}/thread/${threadId}/#q${cleanPostId}`
+                        : `https://${apiDomain}/${board}/thread/${threadId}`;
+
+                    const apiData = await apiResponse.json();
+
+                    // Edge case - when the API returns 200, but passing an error as API instead
+                    if (apiData.error) {
+                        console.log(apiURL + " responded with " + apiData.error, apiResponse.status, apiResponse.statusText )
+                        return { error: 'Thread not found', status: 404 };
+                    }
 
                     // Passing redirect if a real user
                     if(!isBotRequest) {
                         return { redirect: redirectUrl };
                     }
 
-                    isArchive = false;
+                    // Convert Foolfuuka API format to 4chan API format
+                    targetPost = {
+                        no: parseInt(apiData.num),
+                        sub: apiData.title_processed || apiData.title,
+                        com: apiData.comment_processed || apiData.comment,
+                        tim: apiData.media?.media ? apiData.media.media.split('.')[0] : null,
+                        ext: apiData.media?.media ? '.' + apiData.media.media.split('.').pop() : null,
+                        w: apiData.media?.media_w ? parseInt(apiData.media.media_w) : null,
+                        h: apiData.media?.media_h ? parseInt(apiData.media.media_h) : null,
+                        // Store original media link as fallback
+                        apiMediaLink: apiData.media?.media_link || apiData.media?.thumb_link|| null
+                    };
+
+                    // Find the original thread ID
+                    threadId = apiData.thread_num;
+                    source = archiveName;
                 }
+
             }
-
-            // Otherwise, if the thread is dead, or is alive but the comment is dead but archived, we return the archive
-            if (shouldFetchArchive)
-            {
-                if (!apiResponse.ok) {
-                    console.log(apiURL + " failed to response", apiResponse.status, apiResponse.statusText )
-                    return { error: 'Thread not found', status: 404 };
-                }
-
-                redirectUrl = cleanPostId
-                    ? `https://${apiDomain}/${board}/thread/${threadId}/#q${cleanPostId}`
-                    : `https://${apiDomain}/${board}/thread/${threadId}`;
-
-                const apiData = await apiResponse.json();
-
-                // Edge case - when the API returns 200, but passing an error as API instead
-                if (apiData.error) {
-                    console.log(apiURL + " responded with " + apiData.error, apiResponse.status, apiResponse.statusText )
-                    return { error: 'Thread not found', status: 404 };
-                }
-
-                // Passing redirect if a real user
-                if(!isBotRequest) {
-                    return { redirect: redirectUrl };
-                }
-
-                // Convert Foolfuuka API format to 4chan API format
-                targetPost = {
-                    no: parseInt(apiData.num),
-                    sub: apiData.title_processed || apiData.title,
-                    com: apiData.comment_processed || apiData.comment,
-                    tim: apiData.media?.media ? apiData.media.media.split('.')[0] : null,
-                    ext: apiData.media?.media ? '.' + apiData.media.media.split('.').pop() : null,
-                    w: apiData.media?.media_w ? parseInt(apiData.media.media_w) : null,
-                    h: apiData.media?.media_h ? parseInt(apiData.media.media_h) : null,
-                    // Store original media link as fallback
-                    apiMediaLink: apiData.media?.media_link || apiData.media?.thumb_link|| null
-                };
-
-                // Find the original thread ID
-                threadId = apiData.thread_num;
-                source = archiveName;
-            }
-
         } else if (!response.ok) {
             console.log(apiURL + " failed to response", apiResponse.status, apiResponse.statusText )
             return { error: 'Thread not found', status: 404 };
