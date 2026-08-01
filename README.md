@@ -57,6 +57,9 @@ You can tell which archive it is from by looking at the top of the embed. In thi
 Prerequisite: node.js
 
 \>configure the application in ```config.js```
+```
+cp config.js.skel config.js # make a copy from the skeleton config file
+```
 
 \>run ```npm install``` to install dependencies
 
