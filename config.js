@@ -12,3 +12,8 @@ export const rootRedirectURL = "https://github.com/CHooverShrimp/fx-4chan";
 export const allowsImageProxy = true;
 export const imageProxySrc = ["arch-img.b4k.dev","archived.moe"];
 export const imageProxyAge = 86400;                     // Request the services to cache for n seconds (default 24 hrs)
+
+// Tor Proxying - Route outbound fetches (archive scraping, image proxying) through Tor
+export const enableTorProxy = true;
+export const torProxyHost = "127.0.0.1";
+export const torProxyPort = 9050;

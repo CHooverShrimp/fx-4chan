@@ -1,8 +1,21 @@
 // index.js - Express version
+import * as config from "./config.js";
+import { socksDispatcher } from "fetch-socks";
+import { setGlobalDispatcher } from "undici";
+
+if (config.enableTorProxy) {
+  setGlobalDispatcher(
+    socksDispatcher({
+      type: 5,
+      host: config.torProxyHost,
+      port: config.torProxyPort,
+    })
+  );
+  console.log(`Tor proxy enabled: routing outbound requests through ${config.torProxyHost}:${config.torProxyPort}`);
+}
 
 import express from "express";
 import { handleThreadRequest } from "./utils/threadHandler.js";
-import * as config from "./config.js";
 
 const app = express();
 
