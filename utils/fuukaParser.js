@@ -1,4 +1,6 @@
 // utils/fuukaParser.js
+import * as config from "../config.js";
+import { getTorDispatcher } from "./torDispatcher.js";
 // Fuuka's post markup (see https://github.com/eksopl/fuuka/blob/master/templates.pl)
 // looks roughly like this per post:
 //
@@ -132,10 +134,15 @@ export function parseFuukaThreadHtml(html, apiDomain) {
 
 // Fetches and parses a thread from any Fuuka-based archive. Returns null if
 // the thread itself doesn't exist / the archive returned a non-OK response.
-export async function fetchFuukaThread(apiDomain, board, threadId) {
+export async function fetchFuukaThread(apiDomain, board, threadId, useTorProxy = false) {
     const url = `https://${apiDomain}/${board}/thread/${threadId}`;
 
-    const response = await fetch(url, { headers: FETCH_HEADERS });
+    const fetchOptions = { headers: FETCH_HEADERS };
+    if (useTorProxy && config.enableTorProxy) {
+        fetchOptions.dispatcher = getTorDispatcher();
+    }
+
+    const response = await fetch(url, fetchOptions);
 
     if (!response.ok) {
         console.log(url + " failed to respond", response.status, response.statusText);
@@ -168,8 +175,8 @@ export function findFuukaPost(posts, postId) {
 }
 
 // Convenience wrapper: fetch + find in one call.
-export async function getFuukaPost(apiDomain, board, threadId, postId = null) {
-    const posts = await fetchFuukaThread(apiDomain, board, threadId);
+export async function getFuukaPost(apiDomain, board, threadId, postId = null, useTorProxy = false) {
+    const posts = await fetchFuukaThread(apiDomain, board, threadId, useTorProxy);
     if (!posts) return null;
 
     const lookupId = postId || threadId;

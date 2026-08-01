@@ -17,3 +17,40 @@ export const imageProxyAge = 86400;                     // Request the services 
 export const enableTorProxy = false;
 export const torProxyHost = "127.0.0.1";
 export const torProxyPort = 9050;
+
+// Archives, will match based on order of appearance.
+export const ARCHIVES = [
+    {
+        archive: "Desuarchive",
+        api: "desuarchive.org",
+        tech: "foolfuuka",
+        board: ["a", "aco", "an", "c", "cgl", "co", "d", "fit", "g", "his", "int", "k", "m", "mlp", "mu", "q", "qa", "r9k", "tg", "trash", "vr", "wsg"],
+    },
+    {
+        archive: "b4k",
+        api: "arch.b4k.dev",
+        tech: "foolfuuka",
+        board: ["v", "vg", "vm", "vmg", "vp", "vrpg", "vst"],
+    },
+    {
+        archive: "4plebs",
+        api: "archive.4plebs.org",
+        tech: "foolfuuka",
+        board: ["adv", "f", "hr", "mlpol", "mo", "o", "pol", "s4s", "sp", "tg", "trv", "tv", "x"],
+    },
+    // Warosu runs the older "fuuka" archiver (not foolfuuka) and has no JSON API,
+    // so it's handled separately via utils/fuukaParser.js
+    {
+        archive: "warosu",
+        api: "warosu.org",
+        tech: "fuuka",
+        isProxy: true, // we must proxy this through Tor because Warosu blocks datacenter IPs.
+        board: ["3", "biz", "ck", "diy", "fa", "ic", "jp", "lit", "sci", "vr", "vt"],
+    },
+    { // fallback, most unreliable, doesn't cache image, api returning stub instead of just 404, etc.
+        archive: "Archived.Moe",
+        api: "archived.moe",
+        tech: "foolfuuka",
+        board: ["3", "a", "aco", "adv", "an", "asp", "b", "bant", "biz", "c", "can", "cgl", "ck", "cm", "co", "cock", "con", "d", "diy", "e", "f", "fa", "fap", "fit", "fitlit", "g", "gd", "gif", "h", "hc", "his", "hm", "hr", "i", "ic", "int", "jp", "k", "lgbt", "lit", "m", "mlp", "mlpol", "mo", "mtv", "mu", "n", "news", "o", "out", "outsoc", "p", "po", "pol", "pw", "q", "qa", "qb", "qst", "r", "r9k", "s", "s4s", "sci", "soc", "sp", "spa", "t", "tg", "toy", "trash", "trv", "tv", "u", "v", "vg", "vint", "vip", "vm", "vmg", "vp", "vr", "vrpg", "vst", "vt", "w", "wg", "wsg", "wsr", "x", "xs", "y"],
+    },
+]

@@ -2,42 +2,7 @@
 // Shared logic between Express and Workers versions
 import * as config from "../config.js";
 import { fetchFuukaThread, findFuukaPost } from "./fuukaParser.js";
-
-//Foolfuuka - Asagi Fetcher framework
-export const ARCHIVES = [
-    {
-        archive: "Desuarchive",
-        api: "desuarchive.org",
-        tech: "foolfuuka",
-        board: ["a", "aco", "an", "c", "cgl", "co", "d", "fit", "g", "his", "int", "k", "m", "mlp", "mu", "q", "qa", "r9k", "tg", "trash", "vr", "wsg"],
-    },
-    {
-        archive: "b4k",
-        api: "arch.b4k.dev",
-        tech: "foolfuuka",
-        board: ["v", "vg", "vm", "vmg", "vp", "vrpg", "vst"],
-    },
-    {
-        archive: "4plebs",
-        api: "archive.4plebs.org",
-        tech: "foolfuuka",
-        board: ["adv", "f", "hr", "mlpol", "mo", "o", "pol", "s4s", "sp", "tg", "trv", "tv", "x"],
-    },
-    // Warosu runs the older "fuuka" archiver (not foolfuuka) and has no JSON API,
-    // so it's handled separately via utils/fuukaParser.js
-    {
-        archive: "warosu",
-        api: "warosu.org",
-        tech: "fuuka",
-        board: ["3", "biz", "ck", "diy", "fa", "ic", "jp", "lit", "sci", "vr", "vt"],
-    },
-    { // fallback, most unreliable, doesn't cache image, api returning stub instead of just 404, etc.
-        archive: "Archived.Moe",
-        api: "archived.moe",
-        tech: "foolfuuka",
-        board: ["3", "a", "aco", "adv", "an", "asp", "b", "bant", "biz", "c", "can", "cgl", "ck", "cm", "co", "cock", "con", "d", "diy", "e", "f", "fa", "fap", "fit", "fitlit", "g", "gd", "gif", "h", "hc", "his", "hm", "hr", "i", "ic", "int", "jp", "k", "lgbt", "lit", "m", "mlp", "mlpol", "mo", "mtv", "mu", "n", "news", "o", "out", "outsoc", "p", "po", "pol", "pw", "q", "qa", "qb", "qst", "r", "r9k", "s", "s4s", "sci", "soc", "sp", "spa", "t", "tg", "toy", "trash", "trv", "tv", "u", "v", "vg", "vint", "vip", "vm", "vmg", "vp", "vr", "vrpg", "vst", "vt", "w", "wg", "wsg", "wsr", "x", "xs", "y"],
-    },
-]
+import { getTorDispatcher } from "./torDispatcher.js";
 
 export const NSFWBoards = ["aco", "b", "bant", "d", "e", "gif", "h", "hc", "hm", "hr", "pol", "r", "r9k", "s", "s4s", "soc", "t", "u", "y"]
 const blueboardColor = "#0026ffff";
@@ -121,7 +86,7 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
             // foolfuuka, so we fetch the rendered thread page and scrape it.
             if (matchedArchive.tech === 'fuuka')
             {
-                const fuukaPosts = await fetchFuukaThread(apiDomain, board, threadId);
+                const fuukaPosts = await fetchFuukaThread(apiDomain, board, threadId, !!matchedArchive.isProxy);
                 const fuukaPost = fuukaPosts ? findFuukaPost(fuukaPosts, lookupPostId) : null;
 
                 if (!fuukaPost) {
@@ -155,7 +120,7 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
             else if (matchedArchive.tech === 'foolfuuka')
             {
                 const apiURL = `https://${apiDomain}/_/api/chan/post?board=${board}&num=${lookupPostId}`;
-                const apiResponse = await fetch(apiURL, {
+                const apiFetchOptions = {
                     headers: {
                         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0 Safari/537.36",
                         "Accept": "application/json, text/plain, */*",
@@ -168,7 +133,11 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
                         "Sec-Ch-Ua-Mobile": "?0",
                         "Sec-Ch-Ua-Platform": "\"Windows\"",
                     }
-                });
+                };
+                if (matchedArchive.isProxy && config.enableTorProxy) {
+                    apiFetchOptions.dispatcher = getTorDispatcher();
+                }
+                const apiResponse = await fetch(apiURL, apiFetchOptions);
 
                 let shouldFetchArchive = true;
 
