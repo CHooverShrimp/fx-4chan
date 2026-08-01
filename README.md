@@ -83,3 +83,10 @@ There's already a wrangler.toml set up to correctly build the right cloudflare v
 \>import the git repo in WORKERS! NOT PAGES!
 
 \>on ```Build command```, assign ```npm install```
+
+## Tor Proxying
+Some archives block IPs from datacenter. This is the case for b4k and Warosu. We somewhat facilitate this by proxying fetches through tor.
+
+To proxy through Tor, you would need to install `Tor`, which is a separate application outside of npm.
+
+Add `isProxy: true,` line to the archive you wish to use Tor proxy, and enable `enableTorProxy = true`
