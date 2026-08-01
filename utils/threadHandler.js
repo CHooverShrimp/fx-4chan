@@ -70,7 +70,7 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
         }
 
         // Checks if the board is foolfuuka compliant
-        const matchedArchive = ARCHIVES.find(archive => archive.board.includes(board));
+        const matchedArchive = config.ARCHIVES.find(archive => archive.board.includes(board));
         if (matchedArchive) {
             archiveName = matchedArchive.archive;
             apiDomain = matchedArchive.api;
@@ -169,7 +169,7 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
 
             }
         } else if (!response.ok) {
-            console.log(apiURL + " failed to response", apiResponse.status, apiResponse.statusText )
+            console.log(apiUrl + " failed to respond", response.status, response.statusText)
             return { error: 'Thread not found', status: 404 };
         } else {
             targetPost = data.posts[0]; // Default to OP
