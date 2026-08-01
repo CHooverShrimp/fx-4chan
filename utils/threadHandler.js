@@ -2,7 +2,7 @@
 // Shared logic between Express and Workers versions
 import * as config from "../config.js";
 import { fetchFuukaThread, findFuukaPost } from "./fuukaParser.js";
-import { getTorDispatcher } from "./torDispatcher.js";
+import { fetchFoolfuukaPost } from "./foolfuukaParser.js";
 
 export const NSFWBoards = ["aco", "b", "bant", "d", "e", "gif", "h", "hc", "hm", "hr", "pol", "r", "r9k", "s", "s4s", "soc", "t", "u", "y"]
 const blueboardColor = "#0026ffff";
@@ -119,25 +119,7 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
             }
             else if (matchedArchive.tech === 'foolfuuka')
             {
-                const apiURL = `https://${apiDomain}/_/api/chan/post?board=${board}&num=${lookupPostId}`;
-                const apiFetchOptions = {
-                    headers: {
-                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0 Safari/537.36",
-                        "Accept": "application/json, text/plain, */*",
-                        "Accept-Language": "en-US,en;q=0.9",
-                        "Referer": `https://${apiDomain}/${board}/`,
-                        "Sec-Fetch-Site": "same-origin",
-                        "Sec-Fetch-Mode": "cors",
-                        "Sec-Fetch-Dest": "empty",
-                        "Sec-Ch-Ua": `"Chromium";v="123", "Not.A/Brand";v="24"`,
-                        "Sec-Ch-Ua-Mobile": "?0",
-                        "Sec-Ch-Ua-Platform": "\"Windows\"",
-                    }
-                };
-                if (matchedArchive.isProxy && config.enableTorProxy) {
-                    apiFetchOptions.dispatcher = getTorDispatcher();
-                }
-                const apiResponse = await fetch(apiURL, apiFetchOptions);
+                const foolfuukaResult = await fetchFoolfuukaPost(apiDomain, board, lookupPostId, !!matchedArchive.isProxy);
 
                 let shouldFetchArchive = true;
 
@@ -145,7 +127,7 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
                 if (response.ok && (lookupPostId !== threadId)) // 4chan thread is alive, post ID is not the same as thread
                 {
                     // Check the post if it exists in the archive
-                    if (!apiResponse.ok) {
+                    if (!foolfuukaResult.ok) {
                         // In this case, the thread is alive, but comment cannot be found on both the archives AND 4chan
                         targetPost = data.posts[0]; // Return OP from 4chan
                         shouldFetchArchive = false;
@@ -165,8 +147,7 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
                 // Otherwise, if the thread is dead, or is alive but the comment is dead but archived, we return the archive
                 if (shouldFetchArchive)
                 {
-                    if (!apiResponse.ok) {
-                        console.log(apiURL + " failed to response", apiResponse.status, apiResponse.statusText )
+                    if (!foolfuukaResult.ok) {
                         return { error: 'Thread not found', status: 404 };
                     }
 
@@ -174,34 +155,15 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
                         ? `https://${apiDomain}/${board}/thread/${threadId}/#q${cleanPostId}`
                         : `https://${apiDomain}/${board}/thread/${threadId}`;
 
-                    const apiData = await apiResponse.json();
-
-                    // Edge case - when the API returns 200, but passing an error as API instead
-                    if (apiData.error) {
-                        console.log(apiURL + " responded with " + apiData.error, apiResponse.status, apiResponse.statusText )
-                        return { error: 'Thread not found', status: 404 };
-                    }
-
                     // Passing redirect if a real user
                     if(!isBotRequest) {
                         return { redirect: redirectUrl };
                     }
 
-                    // Convert Foolfuuka API format to 4chan API format
-                    targetPost = {
-                        no: parseInt(apiData.num),
-                        sub: apiData.title_processed || apiData.title,
-                        com: apiData.comment_processed || apiData.comment,
-                        tim: apiData.media?.media ? apiData.media.media.split('.')[0] : null,
-                        ext: apiData.media?.media ? '.' + apiData.media.media.split('.').pop() : null,
-                        w: apiData.media?.media_w ? parseInt(apiData.media.media_w) : null,
-                        h: apiData.media?.media_h ? parseInt(apiData.media.media_h) : null,
-                        // Store original media link as fallback
-                        apiMediaLink: apiData.media?.media_link || apiData.media?.thumb_link|| null
-                    };
+                    targetPost = foolfuukaResult.post;
 
                     // Find the original thread ID
-                    threadId = apiData.thread_num;
+                    threadId = foolfuukaResult.threadId;
                     source = archiveName;
                 }
 
