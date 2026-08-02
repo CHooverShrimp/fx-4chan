@@ -1,6 +1,6 @@
 // utils/foolfuukaParser.js
 import * as config from "../config.js";
-import { getTorDispatcher } from "./torDispatcher.js";
+import { getTorDispatcher, undiciFetch } from "./torDispatcher.js";
 
 const FETCH_HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0 Safari/537.36",
@@ -47,18 +47,27 @@ export async function fetchFoolfuukaPost(apiDomain, board, postId, useTorProxy =
             "Referer": `https://${apiDomain}/${board}/`,
         }
     };
-    if (useTorProxy && config.enableTorProxy) {
+
+    const useDispatcher = useTorProxy && config.enableTorProxy;
+    if (useDispatcher) {
         fetchOptions.dispatcher = getTorDispatcher();
     }
+    const doFetch = useDispatcher ? undiciFetch : fetch;
 
-    const response = await fetch(apiURL, fetchOptions);
+    const response = await doFetch(apiURL, fetchOptions);
 
     if (!response.ok) {
         console.log(apiURL + " failed to respond", response.status, response.statusText);
         return { ok: false, status: response.status, statusText: response.statusText };
     }
 
-    const apiData = await response.json();
+    let apiData;
+    try {
+        apiData = await response.json();
+    } catch (err) {
+        console.log(apiURL + " responded 200 but body was not valid JSON");
+        return { ok: false, apiError: true };
+    }
 
     // Edge case - when the API returns 200, but passing an error as API instead
     if (apiData.error) {

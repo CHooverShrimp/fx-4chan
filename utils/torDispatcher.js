@@ -1,6 +1,11 @@
 // utils/torDispatcher.js
 import { socksDispatcher } from "fetch-socks";
+import { fetch as undiciFetch } from "undici";
 import * as config from "../config.js";
+
+// Issue: fetch is using a baked in Undici 7. This will fuck with Tor dispatcher because of mismatching.
+// Instead, we use the later Undici 8 directly.
+export { undiciFetch };
 
 let torDispatcher = null;
 

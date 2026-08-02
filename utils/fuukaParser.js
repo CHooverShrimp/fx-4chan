@@ -1,6 +1,6 @@
 // utils/fuukaParser.js
 import * as config from "../config.js";
-import { getTorDispatcher } from "./torDispatcher.js";
+import { getTorDispatcher, undiciFetch } from "./torDispatcher.js";
 // Fuuka's post markup (see https://github.com/eksopl/fuuka/blob/master/templates.pl)
 // looks roughly like this per post:
 //
@@ -138,11 +138,13 @@ export async function fetchFuukaThread(apiDomain, board, threadId, useTorProxy =
     const url = `https://${apiDomain}/${board}/thread/${threadId}`;
 
     const fetchOptions = { headers: FETCH_HEADERS };
-    if (useTorProxy && config.enableTorProxy) {
+    const useDispatcher = useTorProxy && config.enableTorProxy;
+    if (useDispatcher)
         fetchOptions.dispatcher = getTorDispatcher();
-    }
 
-    const response = await fetch(url, fetchOptions);
+    const doFetch = useDispatcher ? undiciFetch : fetch;
+
+    const response = await doFetch(url, fetchOptions);
 
     if (!response.ok) {
         console.log(url + " failed to respond", response.status, response.statusText);
