@@ -301,6 +301,13 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
                         <meta charset="utf-8">
                         <title>${title}</title>
 
+                        <meta property="twitter:card" content="summary_large_image">
+                        <meta property="twitter:site" content="@4chan">
+                        <meta property="twitter:title" content="${title}">
+                        <meta property="twitter:description" content="${description}">
+                        <meta property="twitter:image" content="${mediaUrl || ''}">
+                        <meta property="twitter:creator" content="@4chan">
+
                         <meta property="og:title" content="${title}">
                         <meta property="og:description" content="${description}">
                         <meta property="og:type" content="${isVideo ? 'video.other' : 'article'}">
