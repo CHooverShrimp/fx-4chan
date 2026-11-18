@@ -6,7 +6,7 @@ import { handleThreadRequest } from "./utils/threadHandler.js";
 const app = express();
 app.use(express.static("public"));
 
-app.get('/api/v1/statuses/:activityId', async (req, res) => {
+app.get(['/api/v1/statuses/:activityId', '/users/:username/statuses/:activityId'], async (req, res) => {
   const [board, threadId, postId] = decodeURIComponent(req.params.activityId).split(':');
 
   if (!board || !threadId) {

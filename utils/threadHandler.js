@@ -301,7 +301,7 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
         const oembed= `${baseUrl}/oembed?board=${board}&thread=${threadId}${postId ? '&post=' + postId : ''}`
         const activityId = encodeURIComponent(`${board}:${threadId}:${postId || ''}`);
         const activityLink = isDiscordRequest
-            ? `<link rel="alternate" type="application/activity+json" href="${baseUrl}/api/v1/statuses/${activityId}">`
+            ? `<link rel="alternate" type="application/activity+json" href="${baseUrl}/users/${encodeURIComponent(author)}/statuses/${activityId}">`
             : '';
 
         const html = `
