@@ -68,7 +68,7 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
             foundPost = data.posts.find(post => post.no === parseInt(cleanPostId));
             if(foundPost) {
                 redirectUrl = `https://boards.4chan.org/${board}/thread/${threadId}#p${cleanPostId}`;
-                if (!isBotRequest)
+                if (!isBotRequest && !isoembed)
                     return { redirect: redirectUrl };
 
                 isArchive = false;
@@ -79,7 +79,7 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
         if (!postId && response.ok) {
             redirectUrl = `https://boards.4chan.org/${board}/thread/${threadId}`;
             // Redirect real users to actual 4chan thread
-            if (!isBotRequest)
+            if (!isBotRequest && !isoembed)
                 return { redirect: redirectUrl };
 
             isArchive = false;
@@ -111,7 +111,7 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
                         targetPost = data.posts[0]; // Return OP from 4chan
                         redirectUrl = `https://boards.4chan.org/${board}/thread/${threadId}`
 
-                        if (!isBotRequest) {
+                        if (!isBotRequest && !isoembed) {
                             return { redirect: redirectUrl };
                         }
 
@@ -125,7 +125,7 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
                         : `https://${apiDomain}/${board}/thread/${threadId}`;
 
                     // Passing redirect if a real user
-                    if (!isBotRequest) {
+                    if (!isBotRequest && !isoembed) {
                         return { redirect: redirectUrl };
                     }
 

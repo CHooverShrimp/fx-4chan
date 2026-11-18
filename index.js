@@ -116,6 +116,10 @@ app.get('/oembed', async (req, res) => {
     return res.status(result.status).json({ error: result.error });
   }
 
+  if (!result.data) {
+    return res.status(502).json({ error: 'Unable to generate oEmbed data' });
+  }
+
   const { data } = result;
 
   res.json({
