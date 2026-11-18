@@ -226,6 +226,12 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
         const previewSiteName = config.siteNames?.[source] || defaultSiteNames[source] || source;
         const previewIcon = config.siteIconURLs?.[source] || defaultSiteIconURLs[source]
             || `${baseUrl}${config.faviconPath || '/favicon.svg'}`;
+        let previewProviderUrl = baseUrl;
+        try {
+            previewProviderUrl = new URL(previewIcon, baseUrl).origin;
+        } catch {
+            // Keep the embed service as the provider when a custom icon URL is invalid.
+        }
 
         // Convert <br> tags to newlines before sanitizing
         const rawComment = targetPost.com || '';
@@ -244,7 +250,8 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
             return {
                 data: {
                     author: author,
-                    providerName: sourceEmbed,
+                    providerName: previewSiteName,
+                    providerUrl: previewProviderUrl,
                     thumbnailUrl: mediaUrl,
                     thumbnailWidth: targetPost.w,
                     thumbnailHeight: targetPost.h,
