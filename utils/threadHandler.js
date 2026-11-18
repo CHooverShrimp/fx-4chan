@@ -7,6 +7,22 @@ import { fetchFoolfuukaPost } from "./foolfuukaParser.js";
 export const NSFWBoards = ["aco", "b", "bant", "d", "e", "gif", "h", "hc", "hm", "hr", "pol", "r", "r9k", "s", "s4s", "soc", "t", "u", "y"]
 const blueboardColor = "#0026ffff";
 const redboardColor = "#ff0000ff";
+const defaultSiteNames = {
+    "4chan": "4chan",
+    "Desuarchive": "Desuarchive",
+    "b4k": "b4k",
+    "4plebs": "4plebs",
+    "warosu": "Warosu",
+    "Archived.Moe": "Archived.Moe",
+};
+const defaultSiteIconURLs = {
+    "4chan": "https://www.4chan.org/favicon.ico",
+    "Desuarchive": "https://desuarchive.org/favicon.ico",
+    "b4k": "https://arch.b4k.dev/favicon.ico",
+    "4plebs": "https://archive.4plebs.org/favicon.ico",
+    "warosu": "https://warosu.org/favicon.ico",
+    "Archived.Moe": "https://archived.moe/favicon.ico",
+};
 
 export async function handleThreadRequest(request, { board, threadId, postId = null, baseUrl, isoembed = false})
 {
@@ -207,6 +223,9 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
 
         const sourceEmbed = `${source} - /${board.toLowerCase()}/`
         const author = ( targetPost.name ? targetPost.name : "Anonymous") + (targetPost.trip ? " - " + targetPost.trip : "")
+        const previewSiteName = config.siteNames?.[source] || defaultSiteNames[source] || source;
+        const previewIcon = config.siteIconURLs?.[source] || defaultSiteIconURLs[source]
+            || `${baseUrl}${config.faviconPath || '/favicon.svg'}`;
 
         // Convert <br> tags to newlines before sanitizing
         const rawComment = targetPost.com || '';
@@ -274,7 +293,9 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
                         <meta property="og:title" content="${title}">
                         <meta property="og:description" content="${description}">
                         <meta property="og:type" content="${isVideo ? 'video.other' : 'article'}">
-                        <meta property="og:site_name" content="${sourceEmbed}">
+                        <meta property="og:site_name" content="${previewSiteName}">
+                        <meta property="og:url" content="${baseUrl}${request.url || ''}">
+                        <link rel="icon" href="${previewIcon}">
                         ${mediaTags}
                         <meta http-equiv="refresh" content="0;url=${redirectUrl}">
                         <meta property="theme-color" content=${isRedboard ? redboardColor : blueboardColor} />
