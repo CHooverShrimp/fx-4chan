@@ -16,12 +16,12 @@ const defaultSiteNames = {
     "Archived.Moe": "Archived.Moe",
 };
 const defaultSiteIconURLs = {
-    "4chan": "/4chan.ico",
-    "Desuarchive": "/desuarchive.ico",
+    "4chan": "/4chan.png",
+    "Desuarchive": "/desuarchive.png",
     "b4k": "/b4k.png",
-    "4plebs": "/4plebs.ico",
+    "4plebs": "/4plebs.png",
     "warosu": "/warosu.png",
-    "Archived.Moe": "/archived.moe.ico",
+    "Archived.Moe": "/archived.moe.png",
 };
 
 export async function handleThreadRequest(request, { board, threadId, postId = null, baseUrl, isoembed = false})
