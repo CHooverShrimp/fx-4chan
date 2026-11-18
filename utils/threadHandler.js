@@ -36,6 +36,7 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
 
     // Check if it's a bot/crawler (for embeds)
     const isBotRequest = /bot|crawler|spider|facebook|twitter|discord|slack/i.test(userAgent);
+    const isDiscordRequest = /discord/i.test(userAgent);
 
     const apiUrl = `https://a.4cdn.org/${board}/thread/${threadId}.json`;
 
@@ -256,6 +257,11 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
                     author: author,
                     providerName: previewSiteName,
                     providerUrl: previewProviderUrl,
+                    publishedTime,
+                    mediaUrl,
+                    isVideo,
+                    siteName: previewSiteName,
+                    previewIcon,
                     thumbnailUrl: mediaUrl,
                     thumbnailWidth: targetPost.w,
                     thumbnailHeight: targetPost.h,
@@ -293,6 +299,10 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
         }
 
         const oembed= `${baseUrl}/oembed?board=${board}&thread=${threadId}${postId ? '&post=' + postId : ''}`
+        const activityId = encodeURIComponent(`${board}:${threadId}:${postId || ''}`);
+        const activityLink = isDiscordRequest
+            ? `<link rel="alternate" type="application/activity+json" href="${baseUrl}/api/v1/statuses/${activityId}">`
+            : '';
 
         const html = `
                 <!DOCTYPE html>
@@ -318,6 +328,7 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
                         ? `<meta property="article:published_time" content="${publishedTime}">`
                         : ''}
                         <meta property="article:author" content="${author}">
+                        ${activityLink}
                         <link rel="icon" type="image/png" sizes="32x32" href="${previewIcon}">
                         ${mediaTags}
                         <meta http-equiv="refresh" content="0;url=${redirectUrl}">

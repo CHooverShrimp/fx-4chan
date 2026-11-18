@@ -6,6 +6,60 @@ import { handleThreadRequest } from "./utils/threadHandler.js";
 const app = express();
 app.use(express.static("public"));
 
+app.get('/api/v1/statuses/:activityId', async (req, res) => {
+  const [board, threadId, postId] = decodeURIComponent(req.params.activityId).split(':');
+
+  if (!board || !threadId) {
+    return res.status(400).json({ error: 'Invalid activity id' });
+  }
+
+  const baseUrl = `${config.isHTTPS ? "https" : req.protocol}://${req.get('host')}`;
+  const result = await handleThreadRequest(req, {
+    board,
+    threadId,
+    postId: postId || null,
+    baseUrl,
+    isoembed: true,
+  });
+
+  if (result.error || !result.data) {
+    return res.status(result.status || 404).json({
+      error: result.error || 'Post not found',
+    });
+  }
+
+  const { data } = result;
+  const media = data.mediaUrl ? [{
+    id: `${board}-${threadId}-${postId || 'op'}`,
+    type: data.isVideo ? 'video' : 'image',
+    url: data.mediaUrl,
+    preview_url: data.mediaUrl,
+    meta: {
+      original: {
+        width: data.thumbnailWidth || 0,
+        height: data.thumbnailHeight || 0,
+      },
+    },
+  }] : [];
+
+  res.type('application/activity+json').json({
+    id: req.params.activityId,
+    created_at: data.publishedTime || new Date().toISOString(),
+    content: (data.description || '').replace(/\n/g, '<br>'),
+    url: `${baseUrl}/${board}/thread/${threadId}${postId ? `/p${postId}` : ''}`,
+    account: {
+      id: `${board}-${threadId}-${postId || 'op'}`,
+      username: data.author,
+      acct: data.author,
+      display_name: data.author,
+      url: data.providerUrl,
+      avatar: data.previewIcon,
+    },
+    application: { name: data.siteName || data.providerName },
+    media_attachments: media,
+  });
+});
+
 app.get("/", (req, res) => {
   res.redirect(config.rootRedirectURL);
 });
