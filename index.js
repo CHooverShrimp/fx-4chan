@@ -4,6 +4,7 @@ import express from "express";
 import { handleThreadRequest } from "./utils/threadHandler.js";
 
 const app = express();
+app.use(express.static("public"));
 
 app.get("/", (req, res) => {
   res.redirect(config.rootRedirectURL);
