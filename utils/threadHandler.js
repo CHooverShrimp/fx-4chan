@@ -217,6 +217,10 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
         // Check if the file is a video format
         const isVideo = targetPost.ext && ['.webm', '.mp4', '.mov'].includes(targetPost.ext.toLowerCase());
 
+        const publishedTime = Number.isFinite(Number(targetPost.time))
+            ? new Date(Number(targetPost.time) * 1000).toISOString()
+            : null;
+
         const title = postId
             ? `Post #${postId} in /${board.toLowerCase()}/ Thread #${threadId}`
             : (targetPost.sub || `/${board.toLowerCase()}/ Thread #${threadId}`);
@@ -302,7 +306,12 @@ export async function handleThreadRequest(request, { board, threadId, postId = n
                         <meta property="og:type" content="${isVideo ? 'video.other' : 'article'}">
                         <meta property="og:site_name" content="${previewSiteName}">
                         <meta property="og:url" content="${baseUrl}${request.url || ''}">
-                        <link rel="icon" href="${previewIcon}">
+                        <meta property="og:type" content="article">
+                        ${publishedTime
+                        ? `<meta property="article:published_time" content="${publishedTime}">`
+                        : ''}
+                        <meta property="article:author" content="${author}">
+                        <link rel="icon" type="image/png" sizes="32x32" href="${previewIcon}">
                         ${mediaTags}
                         <meta http-equiv="refresh" content="0;url=${redirectUrl}">
                         <meta property="theme-color" content=${isRedboard ? redboardColor : blueboardColor} />
